@@ -6,7 +6,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { agent_id, conversation_id, message } = await req.json();
+    const { agent_id, conversation_id, message, file_urls } = await req.json();
 
     const agent = await base44.entities.Agent.get(agent_id);
     if (!agent) return Response.json({ error: 'Agent not found' }, { status: 404 });
@@ -43,10 +43,60 @@ Deno.serve(async (req) => {
     }
 
     const systemContent = agent.system_prompt + (memoryContext ? '\n\nRelevant memory from past conversations:\n' + memoryContext : '');
+
+    let userText = message || '';
+    const imageUrls = [];
+
+    if (file_urls && file_urls.length > 0) {
+      for (const fileUrl of file_urls) {
+        const cleanUrl = fileUrl.split('?')[0];
+        const ext = cleanUrl.split('.').pop().toLowerCase();
+        const name = decodeURIComponent(cleanUrl.split('/').pop());
+
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+          imageUrls.push(fileUrl);
+        } else if (['mp3', 'wav', 'ogg', 'oga', 'm4a', 'webm', 'mp4', 'mpeg', 'mpga', 'flac'].includes(ext)) {
+          try {
+            const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: fileUrl });
+            userText += `\n\n[Transcribed audio: ${name}]\n${transcript}`;
+          } catch (e) {
+            userText += `\n\n[Audio file attached: ${name}]`;
+          }
+        } else if (['pdf', 'csv', 'xlsx', 'json', 'html', 'txt', 'md', 'doc', 'docx'].includes(ext)) {
+          try {
+            const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+              file_url: fileUrl,
+              json_schema: { type: 'object', properties: { content: { type: 'string' } } }
+            });
+            if (extractResult.status === 'success' && extractResult.output) {
+              const extracted = typeof extractResult.output === 'string' ? extractResult.output : JSON.stringify(extractResult.output);
+              userText += `\n\n[File content: ${name}]\n${extracted.substring(0, 5000)}`;
+            } else {
+              userText += `\n\n[File attached: ${name}]`;
+            }
+          } catch (e) {
+            userText += `\n\n[File attached: ${name}]`;
+          }
+        } else {
+          userText += `\n\n[File attached: ${name}]`;
+        }
+      }
+    }
+
+    let userMessage;
+    if (imageUrls.length > 0) {
+      userMessage = { role: 'user', content: [
+        { type: 'text', text: userText || 'Please analyze the attached image(s).' },
+        ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
+      ]};
+    } else {
+      userMessage = { role: 'user', content: userText };
+    }
+
     const chatMessages = [
       { role: 'system', content: systemContent },
       ...conversation.messages.map(m => ({ role: m.role, content: m.content })),
-      { role: 'user', content: message }
+      userMessage
     ];
 
     const tools = [];
@@ -90,7 +140,7 @@ Deno.serve(async (req) => {
 
     const updatedMessages = [
       ...conversation.messages,
-      { role: 'user', content: message, timestamp: new Date().toISOString() },
+      { role: 'user', content: message, timestamp: new Date().toISOString(), attachments: (file_urls || []).map(url => ({ name: decodeURIComponent(url.split('?')[0].split('/').pop()), url })) },
       { role: 'assistant', content: assistantMessage, timestamp: new Date().toISOString() }
     ];
     await base44.entities.Conversation.update(conversation.id, { messages: updatedMessages });
@@ -162,17 +212,30 @@ async function callGemini(apiKey, model, messages, tools, executeTool) {
   const systemContent = messages[0]?.role === 'system' ? messages[0].content : '';
   const chatMessages = messages[0]?.role === 'system' ? messages.slice(1) : messages;
 
-  const contents = chatMessages.map(m => {
+  const contents = [];
+  for (const m of chatMessages) {
     if (m.role === 'tool') {
-      return { role: 'user', parts: [{ functionResponse: { name: m.tool_call_id || 'tool', response: { result: typeof m.content === 'string' ? JSON.parse(m.content) : m.content } } }] };
+      contents.push({ role: 'user', parts: [{ functionResponse: { name: m.tool_call_id || 'tool', response: { result: typeof m.content === 'string' ? JSON.parse(m.content) : m.content } } }] });
     } else if (m.role === 'assistant' && m.tool_calls) {
-      return { role: 'model', parts: m.tool_calls.map(tc => ({ functionCall: { name: tc.function.name, args: JSON.parse(tc.function.arguments) } })) };
+      contents.push({ role: 'model', parts: m.tool_calls.map(tc => ({ functionCall: { name: tc.function.name, args: JSON.parse(tc.function.arguments) } })) });
     } else if (m.role === 'assistant') {
-      return { role: 'model', parts: [{ text: m.content || '' }] };
+      contents.push({ role: 'model', parts: [{ text: m.content || '' }] });
+    } else if (Array.isArray(m.content)) {
+      const parts = [];
+      for (const c of m.content) {
+        if (c.type === 'text') parts.push({ text: c.text });
+        else if (c.type === 'image_url') {
+          try {
+            const { base64, mimeType } = await fetchImageAsBase64(c.image_url.url);
+            parts.push({ inline_data: { data: base64, mime_type: mimeType } });
+          } catch (e) { parts.push({ text: '[Image could not be loaded]' }); }
+        }
+      }
+      contents.push({ role: 'user', parts });
     } else {
-      return { role: 'user', parts: [{ text: m.content || '' }] };
+      contents.push({ role: 'user', parts: [{ text: m.content || '' }] });
     }
-  });
+  }
 
   const body = { contents, generationConfig: { temperature: 0.7 } };
   if (systemContent) body.systemInstruction = { parts: [{ text: systemContent }] };
@@ -226,6 +289,18 @@ async function callClaude(apiKey, model, messages, tools, executeTool) {
       claudeMessages.push({ role: 'assistant', content });
     } else if (m.role === 'assistant') {
       claudeMessages.push({ role: 'assistant', content: [{ type: 'text', text: m.content || '' }] });
+    } else if (Array.isArray(m.content)) {
+      const content = [];
+      for (const c of m.content) {
+        if (c.type === 'text') content.push({ type: 'text', text: c.text });
+        else if (c.type === 'image_url') {
+          try {
+            const { base64, mimeType } = await fetchImageAsBase64(c.image_url.url);
+            content.push({ type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } });
+          } catch (e) { content.push({ type: 'text', text: '[Image could not be loaded]' }); }
+        }
+      }
+      claudeMessages.push({ role: 'user', content });
     } else {
       claudeMessages.push({ role: 'user', content: [{ type: 'text', text: m.content || '' }] });
     }
@@ -342,6 +417,20 @@ async function doDriveRead(base44, query) {
   } catch (e) {
     return { error: 'Google Drive not connected. Please connect Drive in Settings.' };
   }
+}
+
+async function fetchImageAsBase64(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch image');
+  const buffer = await res.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binary);
+  const mimeType = res.headers.get('content-type') || 'image/jpeg';
+  return { base64, mimeType };
 }
 
 async function doFetchUrl(url) {

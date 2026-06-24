@@ -12,6 +12,7 @@ export default function AgentChat() {
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -37,20 +38,42 @@ export default function AgentChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
 
+  const handleAttach = async (files) => {
+    for (const file of files) {
+      const tempId = Date.now() + Math.random();
+      setAttachments(prev => [...prev, { id: tempId, name: file.name, uploading: true, url: null }]);
+      try {
+        const res = await base44.integrations.Core.UploadFile({ file });
+        setAttachments(prev => prev.map(a => a.id === tempId ? { ...a, uploading: false, url: res.file_url } : a));
+      } catch (e) {
+        setAttachments(prev => prev.filter(a => a.id !== tempId));
+      }
+    }
+  };
+
+  const handleRemoveAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || sending) return;
+    if ((!input.trim() && attachments.length === 0) || sending) return;
     const msg = input.trim();
+    const readyAttachments = attachments.filter(a => a.url && !a.uploading);
+    const fileUrls = readyAttachments.map(a => a.url);
+    const attachmentMeta = readyAttachments.map(a => ({ name: a.name, url: a.url }));
     setInput('');
+    setAttachments([]);
     setSending(true);
     setError(null);
 
-    setMessages(prev => [...prev, { role: 'user', content: msg, timestamp: new Date().toISOString() }]);
+    setMessages(prev => [...prev, { role: 'user', content: msg || '(Attachment)', attachments: attachmentMeta, timestamp: new Date().toISOString() }]);
 
     try {
       const res = await base44.functions.invoke('chatWithAgent', {
         agent_id: id,
         conversation_id: conversation?.id,
-        message: msg
+        message: msg,
+        file_urls: fileUrls
       });
       setMessages(prev => [...prev, { role: 'assistant', content: res.data.message, timestamp: new Date().toISOString() }]);
       if (!conversation) setConversation({ id: res.data.conversation_id });
@@ -120,7 +143,7 @@ export default function AgentChat() {
 
       <div className="px-4 md:px-6 py-4 border-t border-border">
         <div className="max-w-2xl mx-auto">
-          <ChatInput value={input} onChange={setInput} onSend={handleSend} disabled={sending} />
+          <ChatInput value={input} onChange={setInput} onSend={handleSend} disabled={sending} attachments={attachments} onAttach={handleAttach} onRemoveAttachment={handleRemoveAttachment} />
         </div>
       </div>
 
