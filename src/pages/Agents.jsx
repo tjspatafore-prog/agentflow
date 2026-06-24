@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Plus, Trash2, Pencil, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import AgentForm from '@/components/AgentForm';
 
 export default function Agents() {
@@ -10,6 +11,7 @@ export default function Agents() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const navigate = useNavigate();
 
   const load = () => {
@@ -18,8 +20,10 @@ export default function Agents() {
 
   useEffect(() => { load(); }, []);
 
-  const handleDelete = async (id) => {
-    await base44.entities.Agent.delete(id);
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    await base44.entities.Agent.delete(pendingDelete);
+    setPendingDelete(null);
     load();
   };
 
@@ -62,7 +66,7 @@ export default function Agents() {
                 <Button variant="ghost" size="sm" onClick={() => { setEditing(agent); setShowForm(true); }}>
                   <Pencil className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(agent.id)}>
+                <Button variant="ghost" size="sm" onClick={() => setPendingDelete(agent.id)}>
                   <Trash2 className="w-4 h-4 text-destructive" />
                 </Button>
               </div>
@@ -72,6 +76,19 @@ export default function Agents() {
       )}
 
       {showForm && <AgentForm agent={editing} onClose={() => { setShowForm(false); load(); }} />}
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this?</AlertDialogTitle>
+            <AlertDialogDescription>This action cannot be undone. The agent and all its conversations will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

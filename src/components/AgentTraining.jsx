@@ -79,12 +79,11 @@ export default function AgentTraining({ knowledgeFiles, setKnowledgeFiles, perso
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
-      {personaProfile && (
-        <div>
-          <Label className="text-xs">Persona Profile (auto-generated, editable)</Label>
-          <Textarea value={personaProfile} onChange={e => setPersonaProfile(e.target.value)} rows={4} placeholder="The agent's writing persona will appear here after generation..." className="mt-1 text-xs" />
-        </div>
-      )}
+      <div>
+        <Label className="text-xs">Persona / Response Framework</Label>
+        <p className="text-xs text-muted-foreground mb-1">Describe how you want this agent to respond — tone, format, structure, length, or any style guidelines. Or upload files above and click Generate Persona to auto-fill this.</p>
+        <Textarea value={personaProfile} onChange={e => setPersonaProfile(e.target.value)} rows={5} placeholder="e.g. Respond in a concise, professional tone. Use bullet points for key takeaways. Start with a one-sentence summary, then provide details. Avoid jargon. Address me directly as 'you'..." className="text-xs" />
+      </div>
     </div>
   );
 }
