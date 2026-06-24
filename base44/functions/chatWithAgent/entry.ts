@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       memoryContext = memories.map(m => m.content).join('\n\n');
     }
 
-    const systemContent = agent.system_prompt + (memoryContext ? '\n\nRelevant memory from past conversations:\n' + memoryContext : '');
+    const systemContent = agent.system_prompt + (agent.persona_profile ? '\n\nYou must adopt the following writing persona in all your responses:\n' + agent.persona_profile : '') + (memoryContext ? '\n\nRelevant memory from past conversations:\n' + memoryContext : '');
 
     let userText = message || '';
     const imageUrls = [];

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import AgentTraining from '@/components/AgentTraining';
 
 const MODEL_GROUPS = [
   { label: 'OpenAI', models: [
@@ -39,11 +40,13 @@ export default function AgentForm({ agent, onClose }) {
   const [model, setModel] = useState(agent?.model || 'gpt-5.4');
   const [color, setColor] = useState(agent?.color || '#4A7FA5');
   const [tools, setTools] = useState(agent?.tools_enabled || { web_search: false, gmail_read: false, gmail_send: false, memory: true });
+  const [knowledgeFiles, setKnowledgeFiles] = useState((agent?.knowledge_files || []).map(url => ({ name: decodeURIComponent(url.split('?')[0].split('/').pop()), url })));
+  const [personaProfile, setPersonaProfile] = useState(agent?.persona_profile || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, model, color, tools_enabled: tools };
+    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, persona_profile: personaProfile, knowledge_files: knowledgeFiles.filter(f => f.url).map(f => f.url), model, color, tools_enabled: tools };
     if (agent) {
       await base44.entities.Agent.update(agent.id, data);
     } else {
@@ -121,6 +124,7 @@ export default function AgentForm({ agent, onClose }) {
               ))}
             </div>
           </div>
+          <AgentTraining knowledgeFiles={knowledgeFiles} setKnowledgeFiles={setKnowledgeFiles} personaProfile={personaProfile} setPersonaProfile={setPersonaProfile} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
