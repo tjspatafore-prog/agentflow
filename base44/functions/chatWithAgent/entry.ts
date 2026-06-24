@@ -24,11 +24,16 @@ Deno.serve(async (req) => {
     if (conversation_id) {
       conversation = await base44.entities.Conversation.get(conversation_id);
     } else {
-      conversation = await base44.entities.Conversation.create({
-        title: message.substring(0, 50),
-        agent_id: agent_id,
-        messages: []
-      });
+      const recentConvs = await base44.entities.Conversation.filter({ agent_id: agent_id }, '-updated_date', 1);
+      if (recentConvs.length > 0) {
+        conversation = recentConvs[0];
+      } else {
+        conversation = await base44.entities.Conversation.create({
+          title: message.substring(0, 50),
+          agent_id: agent_id,
+          messages: []
+        });
+      }
     }
 
     let memoryContext = '';

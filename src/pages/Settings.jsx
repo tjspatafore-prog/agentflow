@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Check, Mail, Key, Search, ExternalLink } from 'lucide-react';
+import { Check, Mail, Key, Search, ExternalLink, MessageCircle } from 'lucide-react';
 
 export default function Settings() {
   const [settings, setSettings] = useState(null);
@@ -102,6 +102,20 @@ export default function Settings() {
             ) : (
               <p className="text-sm text-muted-foreground">Gmail is not connected. Ask in the chat to connect your Gmail account.</p>
             )}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <MessageCircle className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-sm font-medium">WhatsApp</h2>
+          </div>
+          <div className="p-5 border border-border rounded-lg">
+            <p className="text-sm text-muted-foreground mb-3">Connect your WhatsApp to chat with your AI agents on the go. Once connected, you can message any of your agents directly from WhatsApp.</p>
+            <a href={base44.agents.getWhatsAppConnectURL('nexus_assistant')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+              <MessageCircle className="w-4 h-4" />
+              Connect WhatsApp
+            </a>
           </div>
         </div>
 
