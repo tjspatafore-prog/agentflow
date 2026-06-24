@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Check, Mail, Key, Search, ExternalLink, MessageCircle } from 'lucide-react';
+import { Check, Mail, Key, Search, ExternalLink, MessageCircle, HardDrive } from 'lucide-react';
 
 export default function Settings() {
   const [settings, setSettings] = useState(null);
@@ -15,6 +15,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [gmailConnected, setGmailConnected] = useState(null);
+  const [driveConnected, setDriveConnected] = useState(null);
 
   useEffect(() => {
     base44.entities.AppSettings.list().then(s => {
@@ -28,6 +29,7 @@ export default function Settings() {
       }
     });
     base44.functions.invoke('checkGmailStatus', {}).then(res => setGmailConnected(res.data.connected)).catch(() => setGmailConnected(false));
+    base44.functions.invoke('checkDriveStatus', {}).then(res => setDriveConnected(res.data.connected)).catch(() => setDriveConnected(false));
   }, []);
 
   const handleSave = async () => {
@@ -101,6 +103,25 @@ export default function Settings() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Gmail is not connected. Ask in the chat to connect your Gmail account.</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <HardDrive className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-sm font-medium">Google Drive Integration</h2>
+          </div>
+          <div className="p-5 border border-border rounded-lg">
+            {driveConnected === null ? (
+              <p className="text-sm text-muted-foreground">Checking connection...</p>
+            ) : driveConnected ? (
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-600" />
+                <p className="text-sm">Google Drive is connected. Agents can search and read your documents, sheets, and slides.</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Google Drive is not connected. Ask in the chat to connect your Drive account.</p>
             )}
           </div>
         </div>

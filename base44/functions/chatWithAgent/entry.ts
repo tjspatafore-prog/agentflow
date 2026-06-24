@@ -312,3 +312,66 @@ async function doGmailSend(base44, to, subject, body) {
     return { error: 'Gmail not connected. Please connect Gmail in Settings.' };
   }
 }
+
+async function doDriveRead(base44, query) {
+  try {
+    const { accessToken } = await base44.asServiceRole.connectors.getConnection('googledrive');
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent("fullText contains '" + query + "' and trashed = false")}&fields=files(id,name,mimeType,modifiedTime)&pageSize=5&orderBy=modifiedTime desc`;
+    const searchRes = await fetch(searchUrl, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+    if (!searchRes.ok) return { error: 'Failed to search Google Drive' };
+    const searchData = await searchRes.json();
+
+    const files = await Promise.all((searchData.files || []).slice(0, 3).map(async (file) => {
+      const result = { name: file.name, mimeType: file.mimeType, modifiedTime: file.modifiedTime };
+      if (file.mimeType === 'application/vnd.google-apps.document') {
+        const exportRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=text/plain`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+        if (exportRes.ok) result.content = (await exportRes.text()).substring(0, 3000);
+      } else if (file.mimeType === 'application/vnd.google-apps.spreadsheet') {
+        const exportRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=text/csv`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+        if (exportRes.ok) result.content = (await exportRes.text()).substring(0, 3000);
+      } else if (file.mimeType === 'application/vnd.google-apps.presentation') {
+        const exportRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=text/plain`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+        if (exportRes.ok) result.content = (await exportRes.text()).substring(0, 3000);
+      } else if (file.mimeType.startsWith('text/') || file.mimeType === 'application/pdf') {
+        const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+        if (metaRes.ok) result.content = (await metaRes.text()).substring(0, 3000);
+      }
+      return result;
+    }));
+    return files.length > 0 ? files : { message: 'No files found matching the query' };
+  } catch (e) {
+    return { error: 'Google Drive not connected. Please connect Drive in Settings.' };
+  }
+}
+
+async function doFetchUrl(url) {
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NexusAI/1.0)', 'Accept': 'text/html,application/json' }, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return { error: `Failed to fetch URL (status ${res.status})` };
+    const contentType = res.headers.get('content-type') || '';
+    let text;
+    if (contentType.includes('application/json')) {
+      text = JSON.stringify(await res.json(), null, 2);
+    } else {
+      const html = await res.text();
+      text = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+        .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+        .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+    return { url, content: text.substring(0, 6000) };
+  } catch (e) {
+    return { error: 'Failed to fetch URL: ' + e.message };
+  }
+}
