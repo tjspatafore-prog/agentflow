@@ -65,10 +65,11 @@ Deno.serve(async (req) => {
 
       const isGemini = agent.model && agent.model.startsWith('gemini');
       const isPerplexity = agent.model && agent.model.startsWith('sonar');
-      const agentApiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : settings.openai_api_key;
+      const isClaude = agent.model && agent.model.startsWith('claude');
+      const agentApiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : isClaude ? settings.anthropic_api_key : settings.openai_api_key;
 
       if (!agentApiKey) {
-        results.push({ agent: agent.name, task: subtask.task, result: `Error: ${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : 'OpenAI'} API key not configured` });
+        results.push({ agent: agent.name, task: subtask.task, result: `Error: ${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : isClaude ? 'Anthropic' : 'OpenAI'} API key not configured` });
         trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'done', preview: 'API key not configured' });
         continue;
       }
@@ -83,6 +84,8 @@ Deno.serve(async (req) => {
         agentResult = await callGeminiSimple(agentApiKey, agent.model, agentMessages);
       } else if (isPerplexity) {
         agentResult = await callOpenAISimple(agentApiKey, agent.model, agentMessages, false, 'https://api.perplexity.ai/chat/completions');
+      } else if (isClaude) {
+        agentResult = await callClaudeSimple(agentApiKey, agent.model, agentMessages);
       } else {
         agentResult = await callOpenAISimple(agentApiKey, agent.model, agentMessages, false);
       }
@@ -143,4 +146,21 @@ async function callGeminiSimple(apiKey, model, messages) {
   if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || 'Gemini API error'); }
   const data = await res.json();
   return data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+}
+
+async function callClaudeSimple(apiKey, model, messages) {
+  const systemContent = messages[0]?.role === 'system' ? messages[0].content : '';
+  const chatMessages = messages[0]?.role === 'system' ? messages.slice(1) : messages;
+  const claudeMessages = chatMessages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: [{ type: 'text', text: m.content || '' }] }));
+  const body = { model, max_tokens: 4096, messages: claudeMessages };
+  if (systemContent) body.system = systemContent;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || 'Claude API error'); }
+  const data = await res.json();
+  return (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
 }

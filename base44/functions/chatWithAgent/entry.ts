@@ -16,8 +16,9 @@ Deno.serve(async (req) => {
 
     const isGemini = agent.model && agent.model.startsWith('gemini');
     const isPerplexity = agent.model && agent.model.startsWith('sonar');
-    const apiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : settings.openai_api_key;
-    if (!apiKey) return Response.json({ error: `${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : 'OpenAI'} API key not configured. Please add it in Settings.` }, { status: 400 });
+    const isClaude = agent.model && agent.model.startsWith('claude');
+    const apiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : isClaude ? settings.anthropic_api_key : settings.openai_api_key;
+    if (!apiKey) return Response.json({ error: `${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : isClaude ? 'Anthropic' : 'OpenAI'} API key not configured. Please add it in Settings.` }, { status: 400 });
 
     let conversation;
     if (conversation_id) {
@@ -66,6 +67,8 @@ Deno.serve(async (req) => {
       assistantMessage = await callGemini(apiKey, agent.model, chatMessages, tools, executeTool);
     } else if (isPerplexity) {
       assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool, 'https://api.perplexity.ai/chat/completions');
+    } else if (isClaude) {
+      assistantMessage = await callClaude(apiKey, agent.model, chatMessages, tools, executeTool);
     } else {
       assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool);
     }
@@ -90,6 +93,8 @@ Deno.serve(async (req) => {
           summary = await callGemini(apiKey, agent.model, summaryMessages, [], null);
         } else if (isPerplexity) {
           summary = await callOpenAI(apiKey, 'sonar', summaryMessages, [], null, 'https://api.perplexity.ai/chat/completions');
+        } else if (isClaude) {
+          summary = await callClaude(apiKey, agent.model, summaryMessages, [], null);
         } else {
           summary = await callOpenAI(apiKey, 'gpt-4o-mini', summaryMessages, [], null);
         }
@@ -186,6 +191,63 @@ async function callGemini(apiKey, model, messages, tools, executeTool) {
       toolCallCount++;
     } else {
       return parts.map(p => p.text || '').join('');
+    }
+  }
+  return '';
+}
+
+async function callClaude(apiKey, model, messages, tools, executeTool) {
+  const systemContent = messages[0]?.role === 'system' ? messages[0].content : '';
+  const chatMessages = messages[0]?.role === 'system' ? messages.slice(1) : messages;
+
+  const claudeMessages = [];
+  for (const m of chatMessages) {
+    if (m.role === 'tool') {
+      claudeMessages.push({ role: 'user', content: [{ type: 'tool_result', tool_use_id: m.tool_call_id, content: m.content }] });
+    } else if (m.role === 'assistant' && m.tool_calls) {
+      const content = [];
+      if (m.content) content.push({ type: 'text', text: m.content });
+      for (const tc of m.tool_calls) {
+        content.push({ type: 'tool_use', id: tc.id, name: tc.function.name, input: JSON.parse(tc.function.arguments) });
+      }
+      claudeMessages.push({ role: 'assistant', content });
+    } else if (m.role === 'assistant') {
+      claudeMessages.push({ role: 'assistant', content: [{ type: 'text', text: m.content || '' }] });
+    } else {
+      claudeMessages.push({ role: 'user', content: [{ type: 'text', text: m.content || '' }] });
+    }
+  }
+
+  const claudeTools = tools ? tools.map(t => ({ name: t.function.name, description: t.function.description, input_schema: t.function.parameters })) : [];
+
+  let toolCallCount = 0;
+  const maxToolCalls = 5;
+
+  while (toolCallCount < maxToolCalls) {
+    const body = { model, max_tokens: 4096, messages: claudeMessages };
+    if (systemContent) body.system = systemContent;
+    if (claudeTools.length > 0) body.tools = claudeTools;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.error?.message || 'Claude API error'); }
+
+    const data = await res.json();
+    const content = data.content || [];
+    const toolUses = content.filter(c => c.type === 'tool_use');
+
+    if (toolUses.length > 0 && executeTool) {
+      claudeMessages.push({ role: 'assistant', content });
+      for (const tu of toolUses) {
+        const result = await executeTool(tu.name, tu.input);
+        claudeMessages.push({ role: 'user', content: [{ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) }] });
+      }
+      toolCallCount++;
+    } else {
+      return content.filter(c => c.type === 'text').map(c => c.text).join('');
     }
   }
   return '';

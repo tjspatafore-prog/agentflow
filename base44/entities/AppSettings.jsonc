@@ -17,6 +17,10 @@
     "perplexity_api_key": {
       "type": "string",
       "description": "User's Perplexity API key"
+    },
+    "anthropic_api_key": {
+      "type": "string",
+      "description": "User's Anthropic Claude API key"
     }
   },
   "required": []

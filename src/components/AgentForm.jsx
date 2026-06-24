@@ -36,6 +36,12 @@ const MODEL_GROUPS = [
     { value: 'sonar-reasoning-pro', label: 'Sonar Reasoning Pro' },
     { value: 'sonar-deep-research', label: 'Sonar Deep Research' },
   ]},
+  { label: 'Anthropic Claude', models: [
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+  ]},
 ];
 const COLORS = ['#4A7FA5', '#6B8E5A', '#B5739E', '#C77D4A', '#7B6CB0', '#5A8B8B'];
 

@@ -11,6 +11,7 @@ export default function Settings() {
   const [googleKey, setGoogleKey] = useState('');
   const [cseId, setCseId] = useState('');
   const [perplexityKey, setPerplexityKey] = useState('');
+  const [anthropicKey, setAnthropicKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [gmailConnected, setGmailConnected] = useState(null);
@@ -23,6 +24,7 @@ export default function Settings() {
         setGoogleKey(s[0].google_api_key || '');
         setCseId(s[0].google_cse_id || '');
         setPerplexityKey(s[0].perplexity_api_key || '');
+        setAnthropicKey(s[0].anthropic_api_key || '');
       }
     });
     base44.functions.invoke('checkGmailStatus', {}).then(res => setGmailConnected(res.data.connected)).catch(() => setGmailConnected(false));
@@ -30,7 +32,7 @@ export default function Settings() {
 
   const handleSave = async () => {
     setSaving(true);
-    const data = { openai_api_key: openaiKey, google_api_key: googleKey, google_cse_id: cseId, perplexity_api_key: perplexityKey };
+    const data = { openai_api_key: openaiKey, google_api_key: googleKey, google_cse_id: cseId, perplexity_api_key: perplexityKey, anthropic_api_key: anthropicKey };
     if (settings) {
       await base44.entities.AppSettings.update(settings.id, data);
     } else {
@@ -72,6 +74,11 @@ export default function Settings() {
               <Label>Perplexity API Key</Label>
               <Input type="password" value={perplexityKey} onChange={e => setPerplexityKey(e.target.value)} placeholder="pplx-..." className="mt-1" />
               <p className="text-xs text-muted-foreground mt-1">For Perplexity Sonar models with built-in web search</p>
+            </div>
+            <div>
+              <Label>Anthropic API Key</Label>
+              <Input type="password" value={anthropicKey} onChange={e => setAnthropicKey(e.target.value)} placeholder="sk-ant-..." className="mt-1" />
+              <p className="text-xs text-muted-foreground mt-1">For Claude models (Sonnet, Opus, Haiku)</p>
             </div>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Keys'}
