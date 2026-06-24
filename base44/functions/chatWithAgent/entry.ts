@@ -59,11 +59,19 @@ Deno.serve(async (req) => {
     if (agent.tools_enabled?.gmail_send) {
       tools.push({ type: 'function', function: { name: 'gmail_send', description: "Send an email from the user's Gmail account", parameters: { type: 'object', properties: { to: { type: 'string', description: 'Recipient email address' }, subject: { type: 'string', description: 'Email subject' }, body: { type: 'string', description: 'Email body' } }, required: ['to', 'subject', 'body'] } } });
     }
+    if (agent.tools_enabled?.drive_read) {
+      tools.push({ type: 'function', function: { name: 'drive_read', description: "Search and read files from the user's Google Drive. Returns file names and extracted text content for documents, sheets, and slides.", parameters: { type: 'object', properties: { query: { type: 'string', description: 'Search query to find files in Google Drive' } }, required: ['query'] } } });
+    }
+    if (agent.tools_enabled?.fetch_url) {
+      tools.push({ type: 'function', function: { name: 'fetch_url', description: 'Fetch and extract the full text content from a web page URL. Use this to read articles, papers, or documentation found via web search for deep research.', parameters: { type: 'object', properties: { url: { type: 'string', description: 'The full URL to fetch and read' } }, required: ['url'] } } });
+    }
 
     const executeTool = async (name, args) => {
       if (name === 'web_search') return await doWebSearch(settings.google_api_key, settings.google_cse_id, args.query);
       if (name === 'gmail_read') return await doGmailRead(base44, args.query);
       if (name === 'gmail_send') return await doGmailSend(base44, args.to, args.subject, args.body);
+      if (name === 'drive_read') return await doDriveRead(base44, args.query);
+      if (name === 'fetch_url') return await doFetchUrl(args.url);
       return { error: 'Unknown tool' };
     };
 

@@ -47,6 +47,14 @@
           "type": "boolean",
           "default": false
         },
+        "drive_read": {
+          "type": "boolean",
+          "default": false
+        },
+        "fetch_url": {
+          "type": "boolean",
+          "default": false
+        },
         "memory": {
           "type": "boolean",
           "default": true
@@ -56,6 +64,8 @@
         "web_search": false,
         "gmail_read": false,
         "gmail_send": false,
+        "drive_read": false,
+        "fetch_url": false,
         "memory": true
       }
     },

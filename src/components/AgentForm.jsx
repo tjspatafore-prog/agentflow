@@ -110,6 +110,8 @@ export default function AgentForm({ agent, onClose }) {
                 { key: 'web_search', label: 'Web Search' },
                 { key: 'gmail_read', label: 'Gmail Read' },
                 { key: 'gmail_send', label: 'Gmail Send' },
+                { key: 'drive_read', label: 'Google Drive Read' },
+                { key: 'fetch_url', label: 'Fetch URL (deep browse)' },
                 { key: 'memory', label: 'Memory (auto-summarize conversations)' },
               ].map(({ key, label }) => (
                 <div key={key} className="flex items-center gap-2">
