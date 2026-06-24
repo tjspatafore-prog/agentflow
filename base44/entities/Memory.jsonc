@@ -1,0 +1,22 @@
+{
+  "name": "Memory",
+  "type": "object",
+  "properties": {
+    "agent_id": {
+      "type": "string",
+      "description": "The agent this memory belongs to"
+    },
+    "content": {
+      "type": "string",
+      "description": "Summary of a conversation or key facts"
+    },
+    "conversation_id": {
+      "type": "string",
+      "description": "Source conversation"
+    }
+  },
+  "required": [
+    "agent_id",
+    "content"
+  ]
+}

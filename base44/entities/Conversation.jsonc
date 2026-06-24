@@ -1,0 +1,50 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Conversation title"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Associated agent (null for team conversations)"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "Associated team (null for single-agent conversations)"
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ]
+          },
+          "content": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "agent_name": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

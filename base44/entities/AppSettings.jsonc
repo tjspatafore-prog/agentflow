@@ -1,0 +1,18 @@
+{
+  "name": "AppSettings",
+  "type": "object",
+  "properties": {
+    "openai_api_key": {
+      "type": "string",
+      "description": "User's OpenAI API key"
+    },
+    "google_api_key": {
+      "type": "string",
+      "description": "Google API key for Custom Search"
+    },
+    "google_cse_id": {
+      "type": "string",
+      "description": "Google Custom Search Engine ID"
+    }
+  }
+}
