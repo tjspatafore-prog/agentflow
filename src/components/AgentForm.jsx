@@ -29,6 +29,13 @@ const MODEL_GROUPS = [
     { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
     { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
   ]},
+  { label: 'Perplexity', models: [
+    { value: 'sonar', label: 'Sonar' },
+    { value: 'sonar-pro', label: 'Sonar Pro' },
+    { value: 'sonar-reasoning', label: 'Sonar Reasoning' },
+    { value: 'sonar-reasoning-pro', label: 'Sonar Reasoning Pro' },
+    { value: 'sonar-deep-research', label: 'Sonar Deep Research' },
+  ]},
 ];
 const COLORS = ['#4A7FA5', '#6B8E5A', '#B5739E', '#C77D4A', '#7B6CB0', '#5A8B8B'];
 

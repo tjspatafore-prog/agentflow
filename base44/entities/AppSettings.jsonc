@@ -8,11 +8,16 @@
     },
     "google_api_key": {
       "type": "string",
-      "description": "Google API key for Custom Search"
+      "description": "Google API key for Custom Search and Gemini"
     },
     "google_cse_id": {
       "type": "string",
       "description": "Google Custom Search Engine ID"
+    },
+    "perplexity_api_key": {
+      "type": "string",
+      "description": "User's Perplexity API key"
     }
-  }
+  },
+  "required": []
 }

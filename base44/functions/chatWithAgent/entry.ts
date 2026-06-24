@@ -15,8 +15,9 @@ Deno.serve(async (req) => {
     const settings = settingsList[0] || {};
 
     const isGemini = agent.model && agent.model.startsWith('gemini');
-    const apiKey = isGemini ? settings.google_api_key : settings.openai_api_key;
-    if (!apiKey) return Response.json({ error: `${isGemini ? 'Google' : 'OpenAI'} API key not configured. Please add it in Settings.` }, { status: 400 });
+    const isPerplexity = agent.model && agent.model.startsWith('sonar');
+    const apiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : settings.openai_api_key;
+    if (!apiKey) return Response.json({ error: `${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : 'OpenAI'} API key not configured. Please add it in Settings.` }, { status: 400 });
 
     let conversation;
     if (conversation_id) {
@@ -63,6 +64,8 @@ Deno.serve(async (req) => {
     let assistantMessage;
     if (isGemini) {
       assistantMessage = await callGemini(apiKey, agent.model, chatMessages, tools, executeTool);
+    } else if (isPerplexity) {
+      assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool, 'https://api.perplexity.ai/chat/completions');
     } else {
       assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool);
     }
@@ -85,6 +88,8 @@ Deno.serve(async (req) => {
         let summary;
         if (isGemini) {
           summary = await callGemini(apiKey, agent.model, summaryMessages, [], null);
+        } else if (isPerplexity) {
+          summary = await callOpenAI(apiKey, 'sonar', summaryMessages, [], null, 'https://api.perplexity.ai/chat/completions');
         } else {
           summary = await callOpenAI(apiKey, 'gpt-4o-mini', summaryMessages, [], null);
         }
@@ -100,16 +105,17 @@ Deno.serve(async (req) => {
   }
 });
 
-async function callOpenAI(apiKey, model, messages, tools, executeTool) {
+async function callOpenAI(apiKey, model, messages, tools, executeTool, baseUrl) {
   let toolCallCount = 0;
   const maxToolCalls = 5;
   const chatMessages = [...messages];
+  const url = baseUrl || 'https://api.openai.com/v1/chat/completions';
 
   while (toolCallCount < maxToolCalls) {
     const body = { model, messages: chatMessages };
     if (tools && tools.length > 0) { body.tools = tools; body.tool_choice = 'auto'; }
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body)

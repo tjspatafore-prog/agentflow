@@ -64,10 +64,11 @@ Deno.serve(async (req) => {
       trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'running' });
 
       const isGemini = agent.model && agent.model.startsWith('gemini');
-      const agentApiKey = isGemini ? settings.google_api_key : settings.openai_api_key;
+      const isPerplexity = agent.model && agent.model.startsWith('sonar');
+      const agentApiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : settings.openai_api_key;
 
       if (!agentApiKey) {
-        results.push({ agent: agent.name, task: subtask.task, result: `Error: ${isGemini ? 'Google' : 'OpenAI'} API key not configured` });
+        results.push({ agent: agent.name, task: subtask.task, result: `Error: ${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : 'OpenAI'} API key not configured` });
         trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'done', preview: 'API key not configured' });
         continue;
       }
@@ -80,6 +81,8 @@ Deno.serve(async (req) => {
       let agentResult;
       if (isGemini) {
         agentResult = await callGeminiSimple(agentApiKey, agent.model, agentMessages);
+      } else if (isPerplexity) {
+        agentResult = await callOpenAISimple(agentApiKey, agent.model, agentMessages, false, 'https://api.perplexity.ai/chat/completions');
       } else {
         agentResult = await callOpenAISimple(agentApiKey, agent.model, agentMessages, false);
       }
@@ -115,10 +118,10 @@ Deno.serve(async (req) => {
   }
 });
 
-async function callOpenAISimple(apiKey, model, messages, jsonMode) {
+async function callOpenAISimple(apiKey, model, messages, jsonMode, baseUrl) {
   const body = { model, messages };
   if (jsonMode) body.response_format = { type: 'json_object' };
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch(baseUrl || 'https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
