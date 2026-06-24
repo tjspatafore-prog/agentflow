@@ -1,10 +1,12 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Users, Settings } from 'lucide-react';
+import { Home, Sparkles, Users, Settings, FileText, PenLine } from 'lucide-react';
 
 const NAV = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/agents', label: 'Agents', icon: Sparkles },
   { path: '/teams', label: 'Teams', icon: Users },
+  { path: '/research', label: 'Research', icon: FileText },
+  { path: '/writing', label: 'Writing', icon: PenLine },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 

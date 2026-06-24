@@ -14,6 +14,8 @@ import AgentChat from './pages/AgentChat';
 import Teams from './pages/Teams';
 import TeamChat from './pages/TeamChat';
 import Settings from './pages/Settings';
+import Research from './pages/Research';
+import CreativeWriting from './pages/CreativeWriting';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -48,6 +50,8 @@ const AuthenticatedApp = () => {
         <Route path="/teams" element={<Teams />} />
         <Route path="/teams/:id" element={<TeamChat />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/research" element={<Research />} />
+        <Route path="/writing" element={<CreativeWriting />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

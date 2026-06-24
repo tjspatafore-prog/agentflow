@@ -1,0 +1,35 @@
+{
+  "name": "CreativeWriting",
+  "type": "object",
+  "properties": {
+    "project_title": {
+      "type": "string",
+      "description": "Name of the book, story, or project"
+    },
+    "content": {
+      "type": "string",
+      "description": "The actual prose, chapter draft, or scene"
+    },
+    "genre": {
+      "type": "string",
+      "description": "Writing genre (e.g., sci-fi, fantasy, literary, thriller)"
+    },
+    "outline_notes": {
+      "type": "string",
+      "description": "Plot points, character arcs, or world-building notes"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "idea",
+        "drafting",
+        "revising",
+        "final"
+      ],
+      "default": "drafting"
+    }
+  },
+  "required": [
+    "project_title"
+  ]
+}

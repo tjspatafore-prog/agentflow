@@ -1,0 +1,33 @@
+{
+  "name": "Research",
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "The research topic or question"
+    },
+    "abstract": {
+      "type": "string",
+      "description": "A concise summary of the findings"
+    },
+    "full_content": {
+      "type": "string",
+      "description": "The full synthesized research text"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "Link to the primary source or paper"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Keywords for categorizing the research"
+    }
+  },
+  "required": [
+    "topic"
+  ]
+}
