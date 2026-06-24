@@ -59,7 +59,7 @@ export default function Settings() {
             <div>
               <Label>Google API Key</Label>
               <Input type="password" value={googleKey} onChange={e => setGoogleKey(e.target.value)} placeholder="AIza..." className="mt-1" />
-              <p className="text-xs text-muted-foreground mt-1">For Google Custom Search (web search tool)</p>
+              <p className="text-xs text-muted-foreground mt-1">For Google Custom Search and Gemini AI models. Enable the Generative Language API in Google Cloud.</p>
             </div>
             <div>
               <Label>Google Custom Search Engine ID</Label>

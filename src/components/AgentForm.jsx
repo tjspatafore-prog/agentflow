@@ -5,10 +5,31 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
-const MODELS = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'];
+const MODEL_GROUPS = [
+  { label: 'OpenAI', models: [
+    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o mini' },
+    { value: 'gpt-4.5', label: 'GPT-4.5' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { value: 'gpt-4', label: 'GPT-4' },
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+    { value: 'o1', label: 'o1' },
+    { value: 'o1-mini', label: 'o1 mini' },
+    { value: 'o3-mini', label: 'o3 mini' },
+  ]},
+  { label: 'Google Gemini', models: [
+    { value: 'gemini-3.5-pro', label: 'Gemini 3.5 Pro' },
+    { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+  ]},
+];
 const COLORS = ['#4A7FA5', '#6B8E5A', '#B5739E', '#C77D4A', '#7B6CB0', '#5A8B8B'];
 
 export default function AgentForm({ agent, onClose }) {
@@ -56,7 +77,12 @@ export default function AgentForm({ agent, onClose }) {
             <Select value={model} onValueChange={setModel}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MODELS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                {MODEL_GROUPS.map(group => (
+                  <SelectGroup key={group.label}>
+                    <SelectLabel>{group.label}</SelectLabel>
+                    {group.models.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  </SelectGroup>
+                ))}
               </SelectContent>
             </Select>
           </div>
