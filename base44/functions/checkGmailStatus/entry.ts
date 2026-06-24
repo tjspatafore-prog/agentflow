@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
-      const { accessToken } = await base44.asServiceRole.connectors.getWorkspaceConnection(GMAIL_CONNECTOR_ID);
+      const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
       return Response.json({ connected: !!accessToken });
     } catch (e) {
       return Response.json({ connected: false });

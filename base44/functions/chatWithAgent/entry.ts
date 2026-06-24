@@ -180,7 +180,7 @@ async function doWebSearch(googleApiKey, cseId, query) {
 
 async function doGmailRead(base44, query) {
   try {
-    const { accessToken } = await base44.asServiceRole.connectors.getWorkspaceConnection(GMAIL_CONNECTOR_ID);
+    const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
     const searchUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=5`;
     const searchRes = await fetch(searchUrl, { headers: { 'Authorization': `Bearer ${accessToken}` } });
     if (!searchRes.ok) return { error: 'Failed to search Gmail' };
@@ -207,7 +207,7 @@ async function doGmailRead(base44, query) {
 
 async function doGmailSend(base44, to, subject, body) {
   try {
-    const { accessToken } = await base44.asServiceRole.connectors.getWorkspaceConnection(GMAIL_CONNECTOR_ID);
+    const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
     const email = [`To: ${to}`, `Subject: ${subject}`, 'Content-Type: text/plain; charset=utf-8', 'MIME-Version: 1.0', '', body].join('\r\n');
     const encodedEmail = btoa(unescape(encodeURIComponent(email)));
     const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
