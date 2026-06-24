@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     if (!hasOpenAI && !hasGemini) return Response.json({ error: 'No API keys configured. Please add them in Settings.' }, { status: 400 });
 
     const orchIsGemini = !hasOpenAI;
-    const orchModel = hasOpenAI ? 'gpt-4o' : 'gemini-2.0-flash';
+    const orchModel = hasOpenAI ? 'gpt-5.4' : 'gemini-2.5-flash-lite';
     const orchApiKey = hasOpenAI ? settings.openai_api_key : settings.google_api_key;
 
     const conversation = await base44.entities.Conversation.create({

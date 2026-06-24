@@ -17,33 +17,20 @@
     "model": {
       "type": "string",
       "enum": [
-        "gpt-4o",
-        "gpt-4o-mini",
-        "gpt-4.5",
-        "gpt-4-turbo",
-        "gpt-4",
-        "gpt-3.5-turbo",
-        "o1",
-        "o1-mini",
-        "o3-mini",
-        "gemini-3.5-pro",
+        "gpt-5.5",
+        "gpt-5.4",
+        "gpt-4.1-mini",
+        "claude-opus-4-8",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5",
         "gemini-3.1-pro",
-        "gemini-2.5-pro",
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash",
-        "sonar",
+        "gemini-3.5-flash",
+        "gemini-2.5-flash-lite",
         "sonar-pro",
-        "sonar-reasoning",
         "sonar-reasoning-pro",
-        "sonar-deep-research",
-        "claude-sonnet-4-20250514",
-        "claude-opus-4-20250514",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022"
+        "sonar-deep-research"
       ],
-      "default": "gpt-4o"
+      "default": "gpt-5.4"
     },
     "tools_enabled": {
       "type": "object",

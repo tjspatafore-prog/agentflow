@@ -10,37 +10,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 
 const MODEL_GROUPS = [
   { label: 'OpenAI', models: [
-    { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o mini' },
-    { value: 'gpt-4.5', label: 'GPT-4.5' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    { value: 'gpt-4', label: 'GPT-4' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-    { value: 'o1', label: 'o1' },
-    { value: 'o1-mini', label: 'o1 mini' },
-    { value: 'o3-mini', label: 'o3 mini' },
-  ]},
-  { label: 'Google Gemini', models: [
-    { value: 'gemini-3.5-pro', label: 'Gemini 3.5 Pro' },
-    { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-  ]},
-  { label: 'Perplexity', models: [
-    { value: 'sonar', label: 'Sonar' },
-    { value: 'sonar-pro', label: 'Sonar Pro' },
-    { value: 'sonar-reasoning', label: 'Sonar Reasoning' },
-    { value: 'sonar-reasoning-pro', label: 'Sonar Reasoning Pro' },
-    { value: 'sonar-deep-research', label: 'Sonar Deep Research' },
+    { value: 'gpt-5.5', label: 'GPT-5.5', pricing: '$5 in / $30 out' },
+    { value: 'gpt-5.4', label: 'GPT-5.4', pricing: '$2.50 in / $15 out' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', pricing: '$0.40 in / $1.60 out' },
   ]},
   { label: 'Anthropic Claude', models: [
-    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+    { value: 'claude-opus-4-8', label: 'Claude Opus 4.8', pricing: '$5 in / $25 out' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', pricing: '$3 in / $15 out' },
+    { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', pricing: '$1 in / $5 out' },
+  ]},
+  { label: 'Google Gemini', models: [
+    { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro', pricing: '$2 in / $12 out' },
+    { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', pricing: '$1.50 in / $9 out' },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', pricing: '$0.10 in / $0.40 out' },
+  ]},
+  { label: 'Perplexity', models: [
+    { value: 'sonar-pro', label: 'Sonar Pro', pricing: '$3 in / $15 out + req fee' },
+    { value: 'sonar-reasoning-pro', label: 'Sonar Reasoning Pro', pricing: '$2 in / $8 out + req fee' },
+    { value: 'sonar-deep-research', label: 'Sonar Deep Research', pricing: '$2 in / $8 out + search fee' },
   ]},
 ];
 const COLORS = ['#4A7FA5', '#6B8E5A', '#B5739E', '#C77D4A', '#7B6CB0', '#5A8B8B'];
@@ -49,7 +36,7 @@ export default function AgentForm({ agent, onClose }) {
   const [name, setName] = useState(agent?.name || '');
   const [roleDescription, setRoleDescription] = useState(agent?.role_description || '');
   const [systemPrompt, setSystemPrompt] = useState(agent?.system_prompt || '');
-  const [model, setModel] = useState(agent?.model || 'gpt-4o');
+  const [model, setModel] = useState(agent?.model || 'gpt-5.4');
   const [color, setColor] = useState(agent?.color || '#4A7FA5');
   const [tools, setTools] = useState(agent?.tools_enabled || { web_search: false, gmail_read: false, gmail_send: false, memory: true });
   const [saving, setSaving] = useState(false);
@@ -93,7 +80,14 @@ export default function AgentForm({ agent, onClose }) {
                 {MODEL_GROUPS.map(group => (
                   <SelectGroup key={group.label}>
                     <SelectLabel>{group.label}</SelectLabel>
-                    {group.models.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                    {group.models.map(m => (
+                      <SelectItem key={m.value} value={m.value}>
+                        <span className="flex items-center justify-between w-full">
+                          <span>{m.label}</span>
+                          <span className="text-xs text-muted-foreground ml-3">{m.pricing}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 ))}
               </SelectContent>

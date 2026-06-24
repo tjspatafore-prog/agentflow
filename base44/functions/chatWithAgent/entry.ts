@@ -97,11 +97,11 @@ Deno.serve(async (req) => {
         if (isGemini) {
           summary = await callGemini(apiKey, agent.model, summaryMessages, [], null);
         } else if (isPerplexity) {
-          summary = await callOpenAI(apiKey, 'sonar', summaryMessages, [], null, 'https://api.perplexity.ai/chat/completions');
+          summary = await callOpenAI(apiKey, 'sonar-pro', summaryMessages, [], null, 'https://api.perplexity.ai/chat/completions');
         } else if (isClaude) {
           summary = await callClaude(apiKey, agent.model, summaryMessages, [], null);
         } else {
-          summary = await callOpenAI(apiKey, 'gpt-4o-mini', summaryMessages, [], null);
+          summary = await callOpenAI(apiKey, 'gpt-4.1-mini', summaryMessages, [], null);
         }
         if (summary) {
           await base44.entities.Memory.create({ agent_id: agent_id, content: summary, conversation_id: conversation.id });
