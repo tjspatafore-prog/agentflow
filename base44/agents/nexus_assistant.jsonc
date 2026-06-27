@@ -14,5 +14,80 @@
       "description": "Send a message to a specific AI agent and get a response. Parameters: agent_id (required), conversation_id (optional), message (required)."
     }
   ],
+  "context_files": [
+    {
+      "asset_id": "6a3f4e10365204e1086ecca8",
+      "file_name": "WS1_CBT_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/12f583674_WS1_CBT_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e24fbc62bb3bdb694d9",
+      "file_name": "WS2_DBT_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/b415c32a8_WS2_DBT_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e2d8f03965dc007138a",
+      "file_name": "WS3_REBT_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/30c9de7e6_WS3_REBT_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e373b494bd3e3751d22",
+      "file_name": "WS4_NLP_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/8a7cdc263_WS4_NLP_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e3ff4ce0b921da43a63",
+      "file_name": "WS5_PP_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/b740cb1a8_WS5_PP_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e473b7a7c69a69c6807",
+      "file_name": "WS6_SFBT_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/84bb4ba83_WS6_SFBT_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e51b5d8247379a68c50",
+      "file_name": "WS7_IPT_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/03d57625d_WS7_IPT_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e5aa04e9f03eb6f293e",
+      "file_name": "WS8_TBRI_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/14420cfa9_WS8_TBRI_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4e694a1eb644436a1aca",
+      "file_name": "ME_Mountains_Edge_DETAILED_FG_UPDATE.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/437be597c_ME_Mountains_Edge_DETAILED_FG_UPDATE.docx",
+      "file_type": "docx"
+    },
+    {
+      "asset_id": "6a3f4ef40d059e241a52fcbb",
+      "file_name": "Master_Scenario_Bank.docx",
+      "file_url": "https://media.base44.com/files/public/6a3b38e4bc6dc1b9d746206d/9cbff6501_Master_Scenario_Bank.docx",
+      "file_type": "docx"
+    }
+  ],
+  "app_user_connector_configs": [],
+  "selected_skill_names": [],
+  "selected_workspace_skill_ids": [],
+  "model": "automatic",
+  "telegram_greeting": "",
+  "line_greeting": "",
+  "memory_config": {
+    "enabled": true,
+    "scope": "both",
+    "include_other_conversation_context": false,
+    "instructions": null
+  },
+  "allow_anonymous_access": false,
   "name": "nexus_assistant"
 }
