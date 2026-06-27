@@ -97,5 +97,11 @@
   "required": [
     "name",
     "system_prompt"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": null,
+    "delete": null
+  }
 }
