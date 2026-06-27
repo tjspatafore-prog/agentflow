@@ -84,6 +84,14 @@
     "color": {
       "type": "string",
       "default": "#4A7FA5"
+    },
+    "assigned_user_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "User IDs of staff members who can access this agent"
     }
   },
   "required": [

@@ -12,13 +12,19 @@ export default function Agents() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
+  const isAdmin = currentUser?.role === 'admin';
+  const visibleAgents = isAdmin ? agents : agents.filter(a => (a.assigned_user_ids || []).includes(currentUser?.id));
 
   const load = () => {
     base44.entities.Agent.list().then(a => { setAgents(a); setLoading(false); });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    base44.auth.me().then(setCurrentUser).catch(() => {});
+    load();
+  }, []);
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -34,23 +40,27 @@ export default function Agents() {
           <h1 className="text-2xl font-semibold tracking-tight">Agents</h1>
           <p className="text-sm text-muted-foreground mt-1">Your AI specialists</p>
         </div>
-        <Button onClick={() => { setEditing(null); setShowForm(true); }} size="sm">
-          <Plus className="w-4 h-4 mr-1" /> New Agent
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => { setEditing(null); setShowForm(true); }} size="sm">
+            <Plus className="w-4 h-4 mr-1" /> New Agent
+          </Button>
+        )}
       </div>
 
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
-      ) : agents.length === 0 ? (
+      ) : visibleAgents.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-muted-foreground text-sm mb-4">No agents yet. Create your first one.</p>
-          <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-            <Plus className="w-4 h-4 mr-1" /> Create Agent
-          </Button>
+          <p className="text-muted-foreground text-sm">{isAdmin ? 'No agents yet. Create your first one.' : 'No agents have been assigned to you yet.'}</p>
+          {isAdmin && (
+            <Button onClick={() => { setEditing(null); setShowForm(true); }} className="mt-4">
+              <Plus className="w-4 h-4 mr-1" /> Create Agent
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
-          {agents.map(agent => (
+          {visibleAgents.map(agent => (
             <div key={agent.id} className="group flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/30 transition-colors">
               <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => navigate(`/agents/${agent.id}`)}>
                 <div className="w-2 h-8 rounded-full" style={{ background: agent.color || '#4A7FA5' }} />
@@ -59,17 +69,19 @@ export default function Agents() {
                   <p className="text-xs text-muted-foreground">{agent.role_description || agent.model}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="sm" onClick={() => navigate(`/agents/${agent.id}`)}>
-                  <MessageSquare className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setEditing(agent); setShowForm(true); }}>
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setPendingDelete(agent.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </div>
+              {isAdmin && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/agents/${agent.id}`)}>
+                    <MessageSquare className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setEditing(agent); setShowForm(true); }}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setPendingDelete(agent.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>

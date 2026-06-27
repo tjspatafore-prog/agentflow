@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,11 +44,17 @@ export default function AgentForm({ agent, onClose }) {
   const [knowledgeFiles, setKnowledgeFiles] = useState((agent?.knowledge_files || []).map(url => ({ name: decodeURIComponent(url.split('?')[0].split('/').pop()), url })));
   const [personaProfile, setPersonaProfile] = useState(agent?.persona_profile || '');
   const [saving, setSaving] = useState(false);
+  const [assignedUserIds, setAssignedUserIds] = useState(agent?.assigned_user_ids || []);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    base44.entities.User.list().then(setUsers).catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
     const fileUrls = knowledgeFiles.filter(f => f.url).map(f => f.url);
-    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, persona_profile: personaProfile, knowledge_files: fileUrls, model, color, tools_enabled: tools };
+    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, persona_profile: personaProfile, knowledge_files: fileUrls, model, color, tools_enabled: tools, assigned_user_ids: assignedUserIds };
     let savedAgentId;
     if (agent) {
       await base44.entities.Agent.update(agent.id, data);
@@ -81,10 +87,11 @@ export default function AgentForm({ agent, onClose }) {
           <DialogTitle>{agent ? 'Edit Agent' : 'New Agent'}</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="general" className="py-2">
-          <TabsList className="grid grid-cols-3 w-full">
+          <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
             <TabsTrigger value="training">Training</TabsTrigger>
+            <TabsTrigger value="access">Access</TabsTrigger>
           </TabsList>
           <TabsContent value="general" className="space-y-4 mt-4">
             <div>
@@ -153,6 +160,22 @@ export default function AgentForm({ agent, onClose }) {
           </TabsContent>
           <TabsContent value="training" className="space-y-4 mt-4">
             <AgentTraining knowledgeFiles={knowledgeFiles} setKnowledgeFiles={setKnowledgeFiles} personaProfile={personaProfile} setPersonaProfile={setPersonaProfile} />
+          </TabsContent>
+          <TabsContent value="access" className="space-y-4 mt-4">
+            <div>
+              <Label>Staff Access</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-3">Select which staff members can use this agent. Admins always have access.</p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {users.filter(u => u.role !== 'admin').length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No staff members found. Invite staff from the Staff page.</p>
+                ) : users.filter(u => u.role !== 'admin').map(u => (
+                  <div key={u.id} className="flex items-center gap-2">
+                    <Checkbox checked={assignedUserIds.includes(u.id)} onCheckedChange={v => setAssignedUserIds(prev => v ? [...prev, u.id] : prev.filter(id => id !== u.id))} id={`user-${u.id}`} />
+                    <label htmlFor={`user-${u.id}`} className="text-sm cursor-pointer">{u.full_name || u.email}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
         <DialogFooter>
