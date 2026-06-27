@@ -1,0 +1,42 @@
+{
+  "name": "ClientCase",
+  "type": "object",
+  "properties": {
+    "client_name": {
+      "type": "string",
+      "description": "Pseudonymized client identifier"
+    },
+    "counselor_id": {
+      "type": "string",
+      "description": "User ID of the assigned counselor"
+    },
+    "case_notes": {
+      "type": "string",
+      "description": "Session notes and observations"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "closed",
+        "referred"
+      ],
+      "default": "active"
+    },
+    "summary": {
+      "type": "string",
+      "description": "AI-generated case summary"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Keywords for categorizing the case"
+    }
+  },
+  "required": [
+    "client_name"
+  ]
+}

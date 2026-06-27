@@ -1,0 +1,27 @@
+{
+  "name": "OrganizationSettings",
+  "type": "object",
+  "properties": {
+    "org_name": {
+      "type": "string",
+      "description": "Organization name"
+    },
+    "org_tone": {
+      "type": "string",
+      "description": "Organization-wide tone injected into all agent system prompts"
+    },
+    "emergency_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Keywords that trigger emergency escalation"
+    },
+    "emergency_contact": {
+      "type": "string",
+      "description": "Supervisor or emergency contact info"
+    }
+  },
+  "required": []
+}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Check, Mail, Key, Search, ExternalLink, MessageCircle, HardDrive } from 'lucide-react';
+import OrgSettingsSection from '@/components/OrgSettingsSection';
 
 export default function Settings() {
   const [settings, setSettings] = useState(null);
@@ -125,6 +126,8 @@ export default function Settings() {
             )}
           </div>
         </div>
+
+        <OrgSettingsSection />
 
         <div>
           <div className="flex items-center gap-2 mb-3">

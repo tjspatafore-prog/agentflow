@@ -1,10 +1,13 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Users, Settings, FileText, PenLine } from 'lucide-react';
+import { Home, Sparkles, Users, Settings, FileText, PenLine, FolderOpen, UserCog, BookOpen } from 'lucide-react';
 
 const NAV = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/agents', label: 'Agents', icon: Sparkles },
   { path: '/teams', label: 'Teams', icon: Users },
+  { path: '/cases', label: 'Cases', icon: FolderOpen },
+  { path: '/knowledge', label: 'Knowledge', icon: BookOpen },
+  { path: '/staff', label: 'Staff', icon: UserCog },
   { path: '/research', label: 'Research', icon: FileText },
   { path: '/writing', label: 'Writing', icon: PenLine },
   { path: '/settings', label: 'Settings', icon: Settings },
@@ -40,12 +43,12 @@ export default function Layout() {
         </div>
       </main>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border flex justify-around py-2 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-sidebar-border flex overflow-x-auto py-2 z-50">
         {NAV.map(({ path, label, icon: Icon }) => {
           const active = pathname === path;
           return (
             <Link key={path} to={path}
-              className={`flex flex-col items-center gap-1 px-3 py-1 text-xs transition-colors ${
+              className={`flex flex-col items-center gap-1 px-3 py-1 text-xs transition-colors shrink-0 ${
                 active ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground'
               }`}>
               <Icon className="w-5 h-5" />

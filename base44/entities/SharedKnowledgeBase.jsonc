@@ -1,0 +1,38 @@
+{
+  "name": "SharedKnowledgeBase",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the knowledge resource"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the content"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL of the uploaded file in storage"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "File extension (e.g. pdf, txt, docx)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "CBT",
+        "DBT",
+        "Trauma",
+        "Anxiety",
+        "Depression",
+        "General"
+      ],
+      "default": "General"
+    }
+  },
+  "required": [
+    "title",
+    "file_url"
+  ]
+}
