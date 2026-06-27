@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 // Add page imports here
 import Layout from './components/Layout';
 import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
 import Agents from './pages/Agents';
 import AgentChat from './pages/AgentChat';
 import Teams from './pages/Teams';
@@ -48,6 +49,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/agents/:id" element={<AgentChat />} />
         <Route path="/teams" element={<Teams />} />

@@ -1,8 +1,9 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Users, Settings, FileText, PenLine, FolderOpen, UserCog, BookOpen, Leaf } from 'lucide-react';
+import { Home, Sparkles, Users, Settings, FileText, PenLine, FolderOpen, UserCog, BookOpen, Leaf, LayoutDashboard } from 'lucide-react';
 
 const NAV = [
 { path: '/', label: 'Home', icon: Home },
+{ path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 { path: '/agents', label: 'Agents', icon: Sparkles },
 { path: '/teams', label: 'Teams', icon: Users },
 { path: '/cases', label: 'Cases', icon: FolderOpen },
