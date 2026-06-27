@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Brain, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Brain, Trash2, X, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
+import SaveToCaseDialog from '@/components/SaveToCaseDialog';
 
 export default function AgentChat() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function AgentChat() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [showMemory, setShowMemory] = useState(false);
+  const [showSaveToCase, setShowSaveToCase] = useState(false);
   const [memories, setMemories] = useState([]);
   const messagesEndRef = useRef(null);
 
@@ -108,9 +110,14 @@ export default function AgentChat() {
             <p className="text-xs text-muted-foreground">{agent.model}</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={loadMemory}>
-          <Brain className="w-4 h-4 mr-1" /> Memory
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => setShowSaveToCase(true)} disabled={messages.length === 0}>
+            <FolderPlus className="w-4 h-4 mr-1" /> Save to Case
+          </Button>
+          <Button variant="ghost" size="sm" onClick={loadMemory}>
+            <Brain className="w-4 h-4 mr-1" /> Memory
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
@@ -146,6 +153,10 @@ export default function AgentChat() {
           <ChatInput value={input} onChange={setInput} onSend={handleSend} disabled={sending} attachments={attachments} onAttach={handleAttach} onRemoveAttachment={handleRemoveAttachment} />
         </div>
       </div>
+
+      {showSaveToCase && (
+        <SaveToCaseDialog messages={messages} agentName={agent.name} onClose={() => setShowSaveToCase(false)} />
+      )}
 
       {showMemory && (
         <div className="fixed inset-0 bg-black/20 flex justify-end z-50" onClick={() => setShowMemory(false)}>

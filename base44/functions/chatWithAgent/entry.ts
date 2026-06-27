@@ -14,6 +14,9 @@ Deno.serve(async (req) => {
     const settingsList = await base44.entities.AppSettings.list();
     const settings = settingsList[0] || {};
 
+    const orgSettingsList = await base44.entities.OrganizationSettings.list();
+    const orgSettings = orgSettingsList[0] || {};
+
     const isGemini = agent.model && agent.model.startsWith('gemini');
     const isPerplexity = agent.model && agent.model.startsWith('sonar');
     const isClaude = agent.model && agent.model.startsWith('claude');
@@ -42,7 +45,9 @@ Deno.serve(async (req) => {
       memoryContext = memories.map(m => m.content).join('\n\n');
     }
 
-    const systemContent = agent.system_prompt + (agent.persona_profile ? '\n\nYou must adopt the following writing persona in all your responses:\n' + agent.persona_profile : '') + (memoryContext ? '\n\nRelevant memory from past conversations:\n' + memoryContext : '');
+    const orgTonePrefix = orgSettings.org_tone ? 'ORGANIZATION TONE GUIDELINES (apply to all responses):\n' + orgSettings.org_tone + '\n\n' : '';
+    const emergencyInstruction = orgSettings.emergency_keywords && orgSettings.emergency_keywords.length > 0 ? '\n\nIMPORTANT SAFETY PROTOCOL: If the user expresses thoughts of self-harm, suicide, or crisis, prioritize their safety above all else. Encourage them to contact 988 (Suicide & Crisis Lifeline) or emergency services immediately. Do not attempt to provide therapy for acute crisis situations.' : '';
+    const systemContent = orgTonePrefix + agent.system_prompt + (agent.persona_profile ? '\n\nYou must adopt the following writing persona in all your responses:\n' + agent.persona_profile : '') + (memoryContext ? '\n\nRelevant memory from past conversations:\n' + memoryContext : '') + emergencyInstruction;
 
     let userText = message || '';
     const imageUrls = [];
@@ -137,6 +142,25 @@ Deno.serve(async (req) => {
     }
 
     if (!assistantMessage) assistantMessage = 'I was unable to complete this request. Please try again.';
+
+    let emergencyDetected = false;
+    if (orgSettings.emergency_keywords && orgSettings.emergency_keywords.length > 0) {
+      const lowerMessage = (message || '').toLowerCase();
+      emergencyDetected = orgSettings.emergency_keywords.some(kw => lowerMessage.includes(kw.toLowerCase()));
+    }
+    if (emergencyDetected) {
+      const contact = orgSettings.emergency_contact || '988 (Suicide & Crisis Lifeline)';
+      assistantMessage = `⚠️ If you are in crisis or having thoughts of self-harm, please reach out for immediate support:\n• Call or text 988 (Suicide & Crisis Lifeline)\n• Emergency contact: ${contact}\n\n---\n\n${assistantMessage}`;
+      if (orgSettings.emergency_contact && orgSettings.emergency_contact.includes('@')) {
+        try {
+          await base44.integrations.Core.SendEmail({
+            to: orgSettings.emergency_contact,
+            subject: 'Emergency Keyword Detected in Nexus AI Chat',
+            body: `A message containing emergency keywords was detected.\n\nAgent: ${agent.name}\nUser message: ${message}\nTimestamp: ${new Date().toISOString()}`
+          });
+        } catch (e) { /* email alert failed */ }
+      }
+    }
 
     const updatedMessages = [
       ...conversation.messages,
