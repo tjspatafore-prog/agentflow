@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { UserPlus, Shield } from 'lucide-react';
+import { UserPlus, Shield, Bot } from 'lucide-react';
+import StaffAgentAssignment from '@/components/StaffAgentAssignment';
 
 export default function Staff() {
   const [user, setUser] = useState(null);
@@ -16,14 +17,20 @@ export default function Staff() {
   const [role, setRole] = useState('user');
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState(null);
+  const [agents, setAgents] = useState([]);
+  const [assigningUser, setAssigningUser] = useState(null);
 
   const load = async () => {
     setLoading(true);
     const me = await base44.auth.me();
     setUser(me);
     if (me.role === 'admin') {
-      const all = await base44.entities.User.list();
+      const [all, agentList] = await Promise.all([
+        base44.entities.User.list(),
+        base44.entities.Agent.list()
+      ]);
       setUsers(all);
+      setAgents(agentList);
     }
     setLoading(false);
   };
@@ -79,6 +86,11 @@ export default function Staff() {
               {u.role === 'admin' && <Shield className="w-3 h-3" />}
               {u.role}
             </span>
+            {u.role !== 'admin' && (
+              <Button variant="outline" size="sm" onClick={() => setAssigningUser(u)} className="shrink-0">
+                <Bot className="w-3.5 h-3.5 mr-1" /> {agents.filter(a => (a.assigned_user_ids || []).includes(u.id)).length} agents
+              </Button>
+            )}
           </div>
         ))}
       </div>
@@ -111,6 +123,15 @@ export default function Staff() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {assigningUser && (
+        <StaffAgentAssignment
+          user={assigningUser}
+          agents={agents}
+          assignedAgentIds={agents.filter(a => (a.assigned_user_ids || []).includes(assigningUser.id)).map(a => a.id)}
+          onClose={() => { setAssigningUser(null); load(); }}
+        />
       )}
     </div>
   );
