@@ -6,7 +6,9 @@
     {
       "entity_name": "Agent",
       "allowed_operations": [
-        "read"
+        "read",
+        "create",
+        "update"
       ]
     },
     {
