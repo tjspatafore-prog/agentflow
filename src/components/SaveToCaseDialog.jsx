@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 
-export default function SaveToCaseDialog({ messages, agentName, onClose }) {
+export default function SaveToCaseDialog({ messages, agentName, conversationId, onClose }) {
   const [cases, setCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState(null);
   const [summary, setSummary] = useState('');
@@ -38,6 +38,9 @@ export default function SaveToCaseDialog({ messages, agentName, onClose }) {
       summary,
       case_notes: existingNotes ? existingNotes + '\n\n' + newNote : newNote
     });
+    if (conversationId) {
+      await base44.entities.Conversation.update(conversationId, { case_id: selectedCase });
+    }
     setSaving(false);
     setSaved(true);
     setTimeout(onClose, 1500);

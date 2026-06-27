@@ -155,7 +155,7 @@ export default function AgentChat() {
       </div>
 
       {showSaveToCase && (
-        <SaveToCaseDialog messages={messages} agentName={agent.name} onClose={() => setShowSaveToCase(false)} />
+        <SaveToCaseDialog messages={messages} agentName={agent.name} conversationId={conversation?.id} onClose={() => setShowSaveToCase(false)} />
       )}
 
       {showMemory && (

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, FolderOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Trash2, FolderOpen, MessageSquare } from 'lucide-react';
 import CaseForm from '@/components/CaseForm';
 
 const STATUS_COLORS = {
@@ -17,13 +18,18 @@ export default function Cases() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [conversations, setConversations] = useState([]);
 
   const load = async () => {
     setLoading(true);
     const user = await base44.auth.me();
-    const all = await base44.entities.ClientCase.list('-updated_date');
+    const [all, allConvs] = await Promise.all([
+      base44.entities.ClientCase.list('-updated_date'),
+      base44.entities.Conversation.list('-updated_date')
+    ]);
     const visible = user.role === 'admin' ? all : all.filter(c => c.counselor_id === user.id);
     setCases(visible);
+    setConversations(allConvs);
     setLoading(false);
   };
 
@@ -68,6 +74,17 @@ export default function Cases() {
                   {c.tags?.length > 0 && (
                     <div className="flex gap-1 mt-2 flex-wrap">
                       {c.tags.map(t => <span key={t} className="text-xs bg-accent px-2 py-0.5 rounded">{t}</span>)}
+                    </div>
+                  )}
+                  {conversations.filter(conv => conv.case_id === c.id).length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border/60 space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Linked Sessions</p>
+                      {conversations.filter(conv => conv.case_id === c.id).map(conv => (
+                        <Link key={conv.id} to={conv.agent_id ? `/agents/${conv.agent_id}` : '/agents'} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                          <MessageSquare className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{conv.title}</span>
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>

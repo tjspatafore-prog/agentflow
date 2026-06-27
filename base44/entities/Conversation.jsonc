@@ -14,6 +14,10 @@
       "type": "string",
       "description": "Associated team (null for single-agent conversations)"
     },
+    "case_id": {
+      "type": "string",
+      "description": "Linked client case ID (null for general conversations)"
+    },
     "messages": {
       "type": "array",
       "items": {
