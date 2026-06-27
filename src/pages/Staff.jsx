@@ -74,7 +74,7 @@ export default function Staff() {
 
       <div className="space-y-2">
         {users.map(u => (
-          <div key={u.id} className="flex items-center gap-3 p-4 border border-border rounded-lg">
+          <div key={u.id} className="flex items-center gap-3 p-4 bg-card border border-border rounded-xl shadow-sm">
             <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-sm shrink-0">
               {(u.full_name || u.email || '?')[0].toUpperCase()}
             </div>

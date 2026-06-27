@@ -61,9 +61,9 @@ export default function Agents() {
       ) : (
         <div className="space-y-2">
           {visibleAgents.map(agent => (
-            <div key={agent.id} className="group flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/30 transition-colors">
+            <div key={agent.id} className="group flex items-center justify-between p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
               <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => navigate(`/agents/${agent.id}`)}>
-                <div className="w-2 h-8 rounded-full" style={{ background: agent.color || '#4A7FA5' }} />
+                <div className="w-9 h-9 rounded-lg shrink-0" style={{ background: agent.color || '#4A6761' }} />
                 <div>
                   <p className="font-medium text-sm">{agent.name}</p>
                   <p className="text-xs text-muted-foreground">{agent.role_description || agent.model}</p>

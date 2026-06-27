@@ -62,7 +62,7 @@ export default function Cases() {
       ) : (
         <div className="space-y-3">
           {cases.map(c => (
-            <div key={c.id} className="p-4 border border-border rounded-lg">
+            <div key={c.id} className="p-4 bg-card border border-border rounded-xl shadow-sm">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">

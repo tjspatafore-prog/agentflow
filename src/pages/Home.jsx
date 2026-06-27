@@ -40,27 +40,33 @@ export default function Home() {
           { label: 'Active Cases', value: cases.length, icon: FolderOpen, link: '/cases' },
           { label: 'Recent Sessions', value: conversations.length, icon: MessageSquare, link: '/agents' },
         ].map(({ label, value, icon: Icon, link }) => (
-          <Link key={label} to={link} className="p-4 border border-border rounded-lg hover:border-primary/40 transition-colors">
-            <Icon className="w-4 h-4 text-muted-foreground mb-2" />
+          <Link key={label} to={link} className="p-5 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
+            <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center mb-3">
+              <Icon className="w-4 h-4 text-accent-foreground" />
+            </div>
             <p className="text-2xl font-semibold">{loading ? '—' : value}</p>
-            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
           </Link>
         ))}
       </div>
 
       <div className="space-y-3 mb-10">
         <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Quick Actions</h2>
-        <Link to="/agents" className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/40 transition-colors">
+        <Link to="/agents" className="flex items-center justify-between p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
           <div className="flex items-center gap-3">
-            <MessageSquare className="w-4 h-4 text-primary" />
-            <span className="text-sm">Start a session with an agent</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-primary" />
+            </div>
+            <span className="text-sm font-medium">Start a session with an agent</span>
           </div>
           <ArrowRight className="w-4 h-4 text-muted-foreground" />
         </Link>
-        <Link to="/cases" className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/40 transition-colors">
+        <Link to="/cases" className="flex items-center justify-between p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
           <div className="flex items-center gap-3">
-            <Plus className="w-4 h-4 text-primary" />
-            <span className="text-sm">Add a client case</span>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Plus className="w-4 h-4 text-primary" />
+            </div>
+            <span className="text-sm font-medium">Add a client case</span>
           </div>
           <ArrowRight className="w-4 h-4 text-muted-foreground" />
         </Link>
@@ -71,12 +77,12 @@ export default function Home() {
           <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Active Cases</h2>
           <div className="space-y-2">
             {cases.slice(0, 4).map(c => (
-              <Link key={c.id} to="/cases" className="block p-3 border border-border rounded-lg hover:border-primary/40 transition-colors">
+              <Link key={c.id} to="/cases" className="block p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">{c.client_name}</p>
                   <span className="text-xs text-muted-foreground capitalize">{c.status}</span>
                 </div>
-                {c.summary && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{c.summary}</p>}
+                {c.summary && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{c.summary}</p>}
               </Link>
             ))}
           </div>
@@ -88,7 +94,7 @@ export default function Home() {
           <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Recent Sessions</h2>
           <div className="space-y-2">
             {conversations.map(c => (
-              <Link key={c.id} to={c.agent_id ? `/agents/${c.agent_id}` : '/agents'} className="block p-3 border border-border rounded-lg hover:border-primary/40 transition-colors">
+              <Link key={c.id} to={c.agent_id ? `/agents/${c.agent_id}` : '/agents'} className="block p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
                 <p className="text-sm font-medium">{c.title}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{c.summary || `${(c.messages || []).length} messages`}</p>
               </Link>
