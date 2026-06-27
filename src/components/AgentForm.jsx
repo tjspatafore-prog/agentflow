@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AgentTraining from '@/components/AgentTraining';
 
 const MODEL_GROUPS = [
@@ -46,12 +47,29 @@ export default function AgentForm({ agent, onClose }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, persona_profile: personaProfile, knowledge_files: knowledgeFiles.filter(f => f.url).map(f => f.url), model, color, tools_enabled: tools };
+    const fileUrls = knowledgeFiles.filter(f => f.url).map(f => f.url);
+    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, persona_profile: personaProfile, knowledge_files: fileUrls, model, color, tools_enabled: tools };
+    let savedAgentId;
     if (agent) {
       await base44.entities.Agent.update(agent.id, data);
+      savedAgentId = agent.id;
     } else {
-      await base44.entities.Agent.create(data);
+      const created = await base44.entities.Agent.create(data);
+      savedAgentId = created.id;
     }
+    try {
+      const existingKB = await base44.entities.KnowledgeBase.filter({ agent_id: savedAgentId });
+      const existingUrls = existingKB.map(kb => kb.file_url);
+      for (const kb of existingKB) {
+        if (!fileUrls.includes(kb.file_url)) {
+          await base44.entities.KnowledgeBase.delete(kb.id);
+        }
+      }
+      const newFiles = knowledgeFiles.filter(f => f.url && !existingUrls.includes(f.url));
+      if (newFiles.length > 0) {
+        await base44.entities.KnowledgeBase.bulkCreate(newFiles.map(f => ({ agent_id: savedAgentId, file_name: f.name, file_url: f.url, file_type: f.name.split('.').pop().toLowerCase() })));
+      }
+    } catch (e) { /* KB sync failed, don't block save */ }
     setSaving(false);
     onClose();
   };
@@ -62,9 +80,15 @@ export default function AgentForm({ agent, onClose }) {
         <DialogHeader>
           <DialogTitle>{agent ? 'Edit Agent' : 'New Agent'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div>
-            <Label>Name</Label>
+        <Tabs defaultValue="general" className="py-2">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="tools">Tools</TabsTrigger>
+            <TabsTrigger value="training">Training</TabsTrigger>
+          </TabsList>
+          <TabsContent value="general" className="space-y-4 mt-4">
+            <div>
+              <Label>Name</Label>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Research Assistant" className="mt-1" />
           </div>
           <div>
@@ -106,8 +130,10 @@ export default function AgentForm({ agent, onClose }) {
               ))}
             </div>
           </div>
-          <div>
-            <Label>Tools</Label>
+          </TabsContent>
+          <TabsContent value="tools" className="space-y-4 mt-4">
+            <div>
+              <Label>Tools</Label>
             <div className="space-y-2 mt-2">
               {[
                 { key: 'web_search', label: 'Web Search' },
@@ -124,8 +150,11 @@ export default function AgentForm({ agent, onClose }) {
               ))}
             </div>
           </div>
-          <AgentTraining knowledgeFiles={knowledgeFiles} setKnowledgeFiles={setKnowledgeFiles} personaProfile={personaProfile} setPersonaProfile={setPersonaProfile} />
-        </div>
+          </TabsContent>
+          <TabsContent value="training" className="space-y-4 mt-4">
+            <AgentTraining knowledgeFiles={knowledgeFiles} setKnowledgeFiles={setKnowledgeFiles} personaProfile={personaProfile} setPersonaProfile={setPersonaProfile} />
+          </TabsContent>
+        </Tabs>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving || !name || !systemPrompt}>{saving ? 'Saving...' : 'Save'}</Button>

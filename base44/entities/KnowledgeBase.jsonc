@@ -1,0 +1,27 @@
+{
+  "name": "KnowledgeBase",
+  "type": "object",
+  "properties": {
+    "agent_id": {
+      "type": "string",
+      "description": "The agent this knowledge file belongs to"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Name of the uploaded file"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL of the uploaded file in storage"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "File extension (e.g. pdf, txt, docx)"
+    }
+  },
+  "required": [
+    "agent_id",
+    "file_name",
+    "file_url"
+  ]
+}
