@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, BookOpen, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, BookOpen, ExternalLink, Upload } from 'lucide-react';
 import SharedKnowledgeForm from '@/components/SharedKnowledgeForm';
+import SharedKnowledgeBulkUpload from '@/components/SharedKnowledgeBulkUpload';
 
 const CATEGORIES = ['All', 'CBT', 'DBT', 'Trauma', 'Anxiety', 'Depression', 'General'];
 
@@ -11,6 +12,7 @@ export default function SharedKnowledge() {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [filter, setFilter] = useState('All');
 
@@ -39,7 +41,10 @@ export default function SharedKnowledge() {
           <h1 className="text-2xl font-semibold tracking-tight">Shared Knowledge</h1>
           <p className="text-sm text-muted-foreground mt-1">A library of vetted resources for your team</p>
         </div>
-        <Button onClick={() => setShowForm(true)}><Plus className="w-4 h-4 mr-1" /> Add Resource</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowBulk(true)}><Upload className="w-4 h-4 mr-1" /> Bulk Upload</Button>
+          <Button onClick={() => setShowForm(true)}><Plus className="w-4 h-4 mr-1" /> Add Resource</Button>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
@@ -79,6 +84,8 @@ export default function SharedKnowledge() {
       )}
 
       {showForm && <SharedKnowledgeForm onClose={() => { setShowForm(false); load(); }} />}
+
+      {showBulk && <SharedKnowledgeBulkUpload onClose={() => { setShowBulk(false); load(); }} />}
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
         <AlertDialogContent>
