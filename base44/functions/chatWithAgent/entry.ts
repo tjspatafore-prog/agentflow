@@ -94,9 +94,21 @@ Deno.serve(async (req) => {
       memoryContext = memories.map(m => m.content).join('\n\n');
     }
 
+    let referenceLibrary = '';
+    if (agent.knowledge_files && agent.knowledge_files.length > 0) {
+      const fileList = agent.knowledge_files.map(url => {
+        const publicUrl = url.replace(/https:\/\/base44\.app\/api\/apps\/[^/]+\/files\/mp\/public\/([^/]+)\//, 'https://media.base44.com/files/public/$1/');
+        const rawName = decodeURIComponent(url.split('?')[0].split('/').pop());
+        const cleanName = rawName.replace(/^[a-f0-9]{8,}_/, '').replace(/\.pdf$/i, '').replace(/[_]/g, ' ');
+        return `- ${cleanName}: ${publicUrl}`;
+      });
+      referenceLibrary = '\n\nREFERENCE LIBRARY (downloadable PDFs — share the direct URL when recommending reading material):\n' + fileList.join('\n');
+    }
+    const citationInstruction = '\n\nCITATION & SHARING PROTOCOL:\n1. When referencing information from your knowledge files, include a brief discrete inline citation — e.g., "as outlined in the CBT Workshop manual (p. 12)". Keep it short and inline. Do NOT append a bibliography or source list unless the user explicitly asks for sources.\n2. When recommending a PDF or devotional, ALWAYS include the direct download URL from your Reference Library so the user can access it.';
+
     const orgTonePrefix = orgSettings.org_tone ? 'ORGANIZATION TONE GUIDELINES (apply to all responses):\n' + orgSettings.org_tone + '\n\n' : '';
     const emergencyInstruction = orgSettings.emergency_keywords && orgSettings.emergency_keywords.length > 0 ? '\n\nIMPORTANT SAFETY PROTOCOL: If the user expresses thoughts of self-harm, suicide, or crisis, prioritize their safety above all else. Encourage them to contact 988 (Suicide & Crisis Lifeline) or emergency services immediately. Do not attempt to provide therapy for acute crisis situations.' : '';
-    const systemContent = orgTonePrefix + agent.system_prompt + (agent.persona_profile ? '\n\nYou must adopt the following writing persona in all your responses:\n' + agent.persona_profile : '') + (memoryContext ? '\n\nRelevant memory from past conversations:\n' + memoryContext : '') + emergencyInstruction;
+    const systemContent = orgTonePrefix + agent.system_prompt + (agent.persona_profile ? '\n\nYou must adopt the following writing persona in all your responses:\n' + agent.persona_profile : '') + (memoryContext ? '\n\nRelevant memory from past conversations:\n' + memoryContext : '') + referenceLibrary + citationInstruction + emergencyInstruction;
 
     let userText = message || '';
     const imageUrls = [];
@@ -175,7 +187,7 @@ Deno.serve(async (req) => {
       if (name === 'gmail_read') return await doGmailRead(base44, args.query);
       if (name === 'gmail_send') return await doGmailSend(base44, args.to, args.subject, args.body);
       if (name === 'drive_read') return await doDriveRead(base44, args.query);
-      if (name === 'fetch_url') return await doFetchUrl(args.url);
+      if (name === 'fetch_url') return await doFetchUrl(args.url, base44);
       return { error: 'Unknown tool' };
     };
 
@@ -506,8 +518,22 @@ async function fetchImageAsBase64(url) {
   return { base64, mimeType };
 }
 
-async function doFetchUrl(url) {
+async function doFetchUrl(url, base44) {
   try {
+    const cleanUrl = (url || '').split('?')[0];
+    const ext = cleanUrl.split('.').pop().toLowerCase();
+    if (ext === 'pdf' && base44) {
+      try {
+        const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+          file_url: url,
+          json_schema: { type: 'object', properties: { content: { type: 'string' } } }
+        });
+        if (extractResult.status === 'success' && extractResult.output) {
+          const extracted = typeof extractResult.output === 'string' ? extractResult.output : (extractResult.output.content || JSON.stringify(extractResult.output));
+          return { url, content: extracted.substring(0, 8000) };
+        }
+      } catch (e) { /* PDF extraction failed, fall through to regular fetch */ }
+    }
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NexusAI/1.0)', 'Accept': 'text/html,application/json' }, signal: AbortSignal.timeout(15000) });
     if (!res.ok) return { error: `Failed to fetch URL (status ${res.status})` };
     const contentType = res.headers.get('content-type') || '';
