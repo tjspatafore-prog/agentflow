@@ -21,6 +21,51 @@ Deno.serve(async (req) => {
     const orgSettingsList = await base44.entities.OrganizationSettings.list();
     const orgSettings = orgSettingsList[0] || {};
 
+    // EMERGENCY INTERCEPTOR — early-exit before any LLM call
+    if (orgSettings.emergency_keywords && orgSettings.emergency_keywords.length > 0) {
+      const lowerMessage = (message || '').toLowerCase();
+      const emergencyDetected = orgSettings.emergency_keywords.some(kw => lowerMessage.includes(kw.toLowerCase()));
+      if (emergencyDetected) {
+        const contact = orgSettings.emergency_contact || '988 (Suicide & Crisis Lifeline)';
+        const safetyMessage = `⚠️ SAFETY ALERT\n\nI'm flagging this message for immediate attention. Please reach out for support right now:\n• Call or text 988 (Suicide & Crisis Lifeline)\n• Emergency contact: ${contact}\n• If you are in immediate danger, call 911.\n\nYour supervisor has been automatically notified.`;
+
+        let conversation;
+        if (conversation_id) {
+          conversation = await base44.entities.Conversation.get(conversation_id);
+        } else {
+          const recentConvs = await base44.entities.Conversation.filter({ agent_id: agent_id }, '-updated_date', 1);
+          if (recentConvs.length > 0) {
+            conversation = recentConvs[0];
+          } else {
+            conversation = await base44.entities.Conversation.create({
+              title: message.substring(0, 50),
+              agent_id: agent_id,
+              messages: []
+            });
+          }
+        }
+
+        const emergencyMessages = [
+          ...conversation.messages,
+          { role: 'user', content: message, timestamp: new Date().toISOString() },
+          { role: 'assistant', content: safetyMessage, timestamp: new Date().toISOString() }
+        ];
+        await base44.entities.Conversation.update(conversation.id, { messages: emergencyMessages });
+
+        if (orgSettings.emergency_contact && orgSettings.emergency_contact.includes('@')) {
+          try {
+            await base44.integrations.Core.SendEmail({
+              to: orgSettings.emergency_contact,
+              subject: '🚨 EMERGENCY ALERT — Nexus AI Crisis Keyword Detected',
+              body: `An emergency keyword was detected in a user message.\n\nAgent: ${agent.name}\nUser message: ${message}\nTimestamp: ${new Date().toISOString()}\n\nThis was flagged by the Emergency Interceptor and the user was shown safety resources.`
+            });
+          } catch (e) { /* email alert failed */ }
+        }
+
+        return Response.json({ conversation_id: conversation.id, message: safetyMessage, emergency: true });
+      }
+    }
+
     const isGemini = agent.model && agent.model.startsWith('gemini');
     const isPerplexity = agent.model && agent.model.startsWith('sonar');
     const isClaude = agent.model && agent.model.startsWith('claude');
