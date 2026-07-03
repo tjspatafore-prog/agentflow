@@ -160,17 +160,24 @@ export default function AgentChat() {
 
       {showMemory && (
         <div className="fixed inset-0 bg-black/20 flex justify-end z-50" onClick={() => setShowMemory(false)}>
-          <div className="w-full max-w-md bg-background h-full overflow-y-auto p-6 fade-in" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md bg-muted/30 h-full overflow-y-auto p-6 fade-in border-l border-border" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold">Memory</h2>
+              <div className="flex items-center gap-2">
+                <Brain className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold">Memory</h2>
+              </div>
               <Button variant="ghost" size="sm" onClick={() => setShowMemory(false)}><X className="w-4 h-4" /></Button>
             </div>
+            <p className="text-xs text-muted-foreground mb-4">Context remembered from past conversations with this agent.</p>
             {memories.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No memories yet. Memories are auto-generated from conversations.</p>
+              <div className="text-center py-12">
+                <Brain className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No memories yet. Memories are auto-generated from conversations.</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {memories.map(m => (
-                  <div key={m.id} className="p-3 border border-border rounded-lg group">
+                  <div key={m.id} className="p-3 bg-card border border-border rounded-lg group shadow-sm">
                     <p className="text-sm">{m.content}</p>
                     <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 mt-2 h-7 text-xs" onClick={() => deleteMemory(m.id)}>
                       <Trash2 className="w-3 h-3 mr-1" /> Delete
