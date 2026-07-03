@@ -135,7 +135,7 @@ export default function Settings() {
             <h2 className="text-sm font-medium">WhatsApp</h2>
           </div>
           <div className="p-5 border border-border rounded-lg">
-            <p className="text-sm text-muted-foreground mb-3">Connect your WhatsApp to chat with your AI agents on the go. Once connected, tell the assistant which agent you'd like to talk to (e.g. "therapy agent" or "creative writing agent") and it will route your message to that specific agent only. You can switch agents anytime by saying "switch to [agent name]".</p>
+            <p className="text-sm text-muted-foreground mb-3">Connect your WhatsApp to chat with your AI agents on the go. The Nexus Gateway will automatically route your message to the right assistant — Therapy Assistant for clinical and counseling questions, or Devotional Therapist for spiritual guidance and devotionals. You can also switch agents anytime by saying "switch to [agent name]".</p>
             <a href={base44.agents.getWhatsAppConnectURL('nexus_assistant')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
               <MessageCircle className="w-4 h-4" />
               Connect WhatsApp
