@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { FolderOpen, Sparkles, MessageSquare, ArrowRight, Plus, BookOpen, ExternalLink, Clock } from 'lucide-react';
+import { FolderOpen, Sparkles, MessageSquare, ArrowRight, Plus, BookOpen, ExternalLink, Clock, ChevronDown } from 'lucide-react';
 
 const STATUS_COLORS = {
   active: 'bg-primary',
@@ -16,6 +16,7 @@ export default function Home() {
   const [conversations, setConversations] = useState([]);
   const [featuredResources, setFeaturedResources] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showResources, setShowResources] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -46,33 +47,6 @@ export default function Home() {
         <h1 className="text-2xl font-semibold tracking-tight mb-1">Welcome back{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}</h1>
         <p className="text-muted-foreground text-sm">Your counseling AI workspace</p>
       </div>
-
-      {/* Featured Resources */}
-      {featuredResources.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Featured Resources</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {featuredResources.slice(0, 4).map(r => (
-              <a key={r.id} href={r.file_url} target="_blank" rel="noreferrer" className="flex items-start gap-3 p-3 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all group">
-                <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
-                  <BookOpen className="w-4 h-4 text-accent-foreground" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{r.title}</p>
-                  {r.tags && r.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {r.tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="text-[10px] bg-accent px-1.5 py-0.5 rounded">{tag}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
@@ -182,6 +156,44 @@ export default function Home() {
           <ArrowRight className="w-4 h-4 text-muted-foreground" />
         </Link>
       </div>
+
+      {/* Featured Resources — collapsible */}
+      {featuredResources.length > 0 && (
+        <div className="mt-8">
+          <button onClick={() => setShowResources(!showResources)} className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <BookOpen className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-sm font-medium">Featured Resources</span>
+              <span className="text-xs text-muted-foreground">{featuredResources.length}</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showResources ? 'rotate-180' : ''}`} />
+          </button>
+          {showResources && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 fade-in">
+              {featuredResources.slice(0, 6).map(r => (
+                <a key={r.id} href={r.file_url} target="_blank" rel="noreferrer" className="flex items-start gap-3 p-3 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all group">
+                  <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                    <BookOpen className="w-4 h-4 text-accent-foreground" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{r.title}</p>
+                    {r.tags && r.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {r.tags.slice(0, 3).map(tag => (
+                          <span key={tag} className="text-[10px] bg-accent px-1.5 py-0.5 rounded">{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
