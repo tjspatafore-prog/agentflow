@@ -20,6 +20,7 @@ import CreativeWriting from './pages/CreativeWriting';
 import Cases from './pages/Cases';
 import Staff from './pages/Staff';
 import SharedKnowledge from './pages/SharedKnowledge';
+import WhatsAppConnect from './pages/WhatsAppConnect';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -60,6 +61,7 @@ const AuthenticatedApp = () => {
         <Route path="/cases" element={<Cases />} />
         <Route path="/knowledge" element={<SharedKnowledge />} />
         <Route path="/staff" element={<Staff />} />
+        <Route path="/whatsapp" element={<WhatsAppConnect />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
