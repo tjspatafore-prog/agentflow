@@ -3,15 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Upload, X, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
-
-const CATEGORIES = ['CBT', 'DBT', 'Trauma', 'Anxiety', 'Depression', 'General'];
+import TagInput from '@/components/TagInput';
 
 export default function SharedKnowledgeBulkUpload({ onClose }) {
   const [files, setFiles] = useState([]);
-  const [category, setCategory] = useState('General');
+  const [tags, setTags] = useState([]);
   const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -39,7 +37,7 @@ export default function SharedKnowledgeBulkUpload({ onClose }) {
         records.push({
           title: f.name.replace(/\.[^.]+$/, ''),
           description,
-          category,
+          tags,
           file_url: res.file_url,
           file_type: f.name.split('.').pop().toLowerCase()
         });
@@ -64,13 +62,8 @@ export default function SharedKnowledgeBulkUpload({ onClose }) {
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <Label>Category (applies to all)</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label>Tags (applies to all)</Label>
+            <TagInput tags={tags} onChange={setTags} />
           </div>
           <div>
             <Label>Description (optional, applies to all)</Label>

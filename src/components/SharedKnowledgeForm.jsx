@@ -4,16 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Upload, X } from 'lucide-react';
-
-const CATEGORIES = ['CBT', 'DBT', 'Trauma', 'Anxiety', 'Depression', 'General'];
+import TagInput from '@/components/TagInput';
 
 export default function SharedKnowledgeForm({ onClose }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('General');
+  const [tags, setTags] = useState([]);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,7 +33,7 @@ export default function SharedKnowledgeForm({ onClose }) {
     await base44.entities.SharedKnowledgeBase.create({
       title,
       description,
-      category,
+      tags,
       file_url: file.url,
       file_type: file.name.split('.').pop().toLowerCase()
     });
@@ -59,13 +57,8 @@ export default function SharedKnowledgeForm({ onClose }) {
             <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Brief description of this resource..." className="mt-1" />
           </div>
           <div>
-            <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Label>Tags</Label>
+            <TagInput tags={tags} onChange={setTags} />
           </div>
           <div>
             <Label>File</Label>

@@ -6,8 +6,6 @@ import { Plus, Trash2, BookOpen, ExternalLink, Upload } from 'lucide-react';
 import SharedKnowledgeForm from '@/components/SharedKnowledgeForm';
 import SharedKnowledgeBulkUpload from '@/components/SharedKnowledgeBulkUpload';
 
-const CATEGORIES = ['All', 'CBT', 'DBT', 'Trauma', 'Anxiety', 'Depression', 'General'];
-
 export default function SharedKnowledge() {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +30,8 @@ export default function SharedKnowledge() {
     load();
   };
 
-  const filtered = filter === 'All' ? resources : resources.filter(r => r.category === filter);
+  const allTags = ['All', ...new Set(resources.flatMap(r => r.tags || []))];
+  const filtered = filter === 'All' ? resources : resources.filter(r => (r.tags || []).includes(filter));
 
   return (
     <div className="p-6 md:p-10 max-w-4xl mx-auto">
@@ -48,7 +47,7 @@ export default function SharedKnowledge() {
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        {CATEGORIES.map(c => (
+        {allTags.map(c => (
           <button key={c} onClick={() => setFilter(c)}
             className={`px-3 py-1 rounded-full text-xs transition-colors ${filter === c ? 'bg-primary text-primary-foreground' : 'bg-accent text-muted-foreground hover:bg-accent/70'}`}>
             {c}
@@ -70,7 +69,11 @@ export default function SharedKnowledge() {
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium">{r.title}</h3>
-                  <span className="text-xs bg-accent px-2 py-0.5 rounded mt-1 inline-block">{r.category}</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(r.tags || []).map(tag => (
+                      <span key={tag} className="text-xs bg-accent px-2 py-0.5 rounded">{tag}</span>
+                    ))}
+                  </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setPendingDelete(r.id)} className="shrink-0"><Trash2 className="w-4 h-4 text-destructive" /></Button>
               </div>

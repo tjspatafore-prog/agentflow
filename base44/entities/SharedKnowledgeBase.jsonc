@@ -18,17 +18,13 @@
       "type": "string",
       "description": "File extension (e.g. pdf, txt, docx)"
     },
-    "category": {
-      "type": "string",
-      "enum": [
-        "CBT",
-        "DBT",
-        "Trauma",
-        "Anxiety",
-        "Depression",
-        "General"
-      ],
-      "default": "General"
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Flexible categorization tags for this resource (e.g. CBT, Trauma, Youth, Marriage)"
     }
   },
   "required": [
