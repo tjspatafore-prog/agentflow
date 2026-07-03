@@ -92,6 +92,38 @@
       },
       "default": [],
       "description": "User IDs of staff members who can access this agent"
+    },
+    "research_config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether autonomous daily research is enabled for this agent"
+        },
+        "report_time": {
+          "type": "string",
+          "default": "07:00",
+          "description": "Time of day (HH:MM) to run daily research in the user's timezone"
+        },
+        "focus_topics": {
+          "type": "string",
+          "default": "",
+          "description": "Comma-separated topics or tags the agent should focus its research on"
+        },
+        "document_count": {
+          "type": "integer",
+          "default": 5,
+          "description": "Number of research documents to save per day"
+        }
+      },
+      "default": {
+        "enabled": false,
+        "report_time": "07:00",
+        "focus_topics": "",
+        "document_count": 5
+      },
+      "description": "Autonomous daily research settings"
     }
   },
   "required": [

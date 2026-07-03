@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AgentTraining from '@/components/AgentTraining';
+import AgentResearchConfig from '@/components/AgentResearchConfig';
 
 const MODEL_GROUPS = [
   { label: 'OpenAI', models: [
@@ -45,6 +46,7 @@ export default function AgentForm({ agent, onClose }) {
   const [personaProfile, setPersonaProfile] = useState(agent?.persona_profile || '');
   const [saving, setSaving] = useState(false);
   const [assignedUserIds, setAssignedUserIds] = useState(agent?.assigned_user_ids || []);
+  const [researchConfig, setResearchConfig] = useState(agent?.research_config || { enabled: false, report_time: '07:00', focus_topics: '', document_count: 5 });
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function AgentForm({ agent, onClose }) {
   const handleSave = async () => {
     setSaving(true);
     const fileUrls = knowledgeFiles.filter(f => f.url).map(f => f.url);
-    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, persona_profile: personaProfile, knowledge_files: fileUrls, model, color, tools_enabled: tools, assigned_user_ids: assignedUserIds };
+    const data = { name, role_description: roleDescription, system_prompt: systemPrompt, persona_profile: personaProfile, knowledge_files: fileUrls, model, color, tools_enabled: tools, assigned_user_ids: assignedUserIds, research_config: researchConfig };
     let savedAgentId;
     if (agent) {
       await base44.entities.Agent.update(agent.id, data);
@@ -87,10 +89,11 @@ export default function AgentForm({ agent, onClose }) {
           <DialogTitle>{agent ? 'Edit Agent' : 'New Agent'}</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="general" className="py-2">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-5 w-full">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
             <TabsTrigger value="training">Training</TabsTrigger>
+            <TabsTrigger value="autonomy">Autonomy</TabsTrigger>
             <TabsTrigger value="access">Access</TabsTrigger>
           </TabsList>
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -160,6 +163,9 @@ export default function AgentForm({ agent, onClose }) {
           </TabsContent>
           <TabsContent value="training" className="space-y-4 mt-4">
             <AgentTraining knowledgeFiles={knowledgeFiles} setKnowledgeFiles={setKnowledgeFiles} personaProfile={personaProfile} setPersonaProfile={setPersonaProfile} />
+          </TabsContent>
+          <TabsContent value="autonomy" className="space-y-4 mt-4">
+            <AgentResearchConfig config={researchConfig} setConfig={setResearchConfig} />
           </TabsContent>
           <TabsContent value="access" className="space-y-4 mt-4">
             <div>
