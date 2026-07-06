@@ -18,6 +18,7 @@ const MODEL_GROUPS = [
     { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', pricing: '$0.40 in / $1.60 out' },
   ]},
   { label: 'Anthropic Claude', models: [
+    { value: 'claude-fable-5', label: 'Claude Fable 5', pricing: 'Mythos-class — high cost' },
     { value: 'claude-opus-4-8', label: 'Claude Opus 4.8', pricing: '$5 in / $25 out' },
     { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', pricing: '$3 in / $15 out' },
     { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', pricing: '$1 in / $5 out' },
