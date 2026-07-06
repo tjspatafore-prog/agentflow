@@ -17,6 +17,7 @@ import TeamChat from './pages/TeamChat';
 import Settings from './pages/Settings';
 import Research from './pages/Research';
 import CreativeWriting from './pages/CreativeWriting';
+import Portfolio from './pages/Portfolio';
 import Cases from './pages/Cases';
 import Staff from './pages/Staff';
 import SharedKnowledge from './pages/SharedKnowledge';
@@ -58,6 +59,7 @@ const AuthenticatedApp = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/research" element={<Research />} />
         <Route path="/writing" element={<CreativeWriting />} />
+        <Route path="/portfolio" element={<Portfolio />} />
         <Route path="/cases" element={<Cases />} />
         <Route path="/knowledge" element={<SharedKnowledge />} />
         <Route path="/staff" element={<Staff />} />

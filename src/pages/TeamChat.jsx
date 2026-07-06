@@ -53,7 +53,18 @@ export default function TeamChat() {
     setAttachments([]);
 
     try {
+      // Start polling for in-progress artifacts to show real-time trace updates
+      const pollInterval = setInterval(async () => {
+        try {
+          const recent = await base44.entities.Artifact.filter({ team_id: id }, '-created_date', 1);
+          if (recent.length > 0 && recent[0].trace) {
+            setTrace(recent[0].trace);
+          }
+        } catch (e) { /* poll failed, continue */ }
+      }, 2500);
+
       const res = await base44.functions.invoke('executeTeamGoal', { team_id: id, goal: goal.trim(), file_urls: fileUrls });
+      clearInterval(pollInterval);
       setTrace(res.data.trace || []);
       setFinalResponse(res.data.final_response);
       setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);

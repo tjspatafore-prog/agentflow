@@ -1,11 +1,12 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Users, Settings, FileText, PenLine, FolderOpen, UserCog, BookOpen, Leaf, LayoutDashboard, MessageCircle } from 'lucide-react';
+import { Home, Sparkles, Users, Settings, FileText, PenLine, FolderOpen, UserCog, BookOpen, Leaf, LayoutDashboard, MessageCircle, Briefcase } from 'lucide-react';
 
 const NAV = [
 { path: '/', label: 'Home', icon: Home },
 { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 { path: '/agents', label: 'Agents', icon: Sparkles },
 { path: '/teams', label: 'Teams', icon: Users },
+{ path: '/portfolio', label: 'Portfolio', icon: Briefcase },
 { path: '/cases', label: 'Cases', icon: FolderOpen },
 { path: '/knowledge', label: 'Knowledge', icon: BookOpen },
 { path: '/staff', label: 'Staff', icon: UserCog },

@@ -57,6 +57,17 @@ Deno.serve(async (req) => {
     const orchModel = hasOpenAI ? 'gpt-5.4' : 'gemini-2.5-flash-lite';
     const orchApiKey = hasOpenAI ? settings.openai_api_key : settings.google_api_key;
 
+    // Create Artifact record immediately for progress tracking
+    const artifact = await base44.entities.Artifact.create({
+      title: goal.substring(0, 80),
+      goal: goal,
+      team_id: team_id,
+      team_name: team.name,
+      content: '',
+      status: 'in_progress',
+      trace: []
+    });
+
     const conversation = await base44.entities.Conversation.create({
       title: goal.substring(0, 50),
       team_id: team_id,
@@ -89,12 +100,14 @@ Deno.serve(async (req) => {
     }
 
     trace.push({ step: 'Plan', description: `Decomposed goal into ${subtasks.length} sub-tasks`, subtasks: subtasks.map(s => ({ agent: s.agent_name, task: s.task })) });
+    await base44.entities.Artifact.update(artifact.id, { trace });
 
     // Step 2: Execute each sub-task
     const results = [];
     for (const subtask of subtasks) {
       const agent = agents.find(a => a.name === subtask.agent_name) || agents[0];
       trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'running' });
+      await base44.entities.Artifact.update(artifact.id, { trace });
 
       const isGemini = agent.model && agent.model.startsWith('gemini');
       const isPerplexity = agent.model && agent.model.startsWith('sonar');
@@ -104,11 +117,22 @@ Deno.serve(async (req) => {
       if (!agentApiKey) {
         results.push({ agent: agent.name, task: subtask.task, result: `Error: ${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : isClaude ? 'Anthropic' : 'OpenAI'} API key not configured` });
         trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'done', preview: 'API key not configured' });
+        await base44.entities.Artifact.update(artifact.id, { trace });
         continue;
       }
 
+      // Build shared knowledge context from the SharedKnowledgeBase library
+      let sharedLibrary = '';
+      try {
+        const knowledgeFiles = await base44.entities.SharedKnowledgeBase.list('-created_date', 10);
+        if (knowledgeFiles.length > 0) {
+          sharedLibrary = '\n\nSHARED KNOWLEDGE LIBRARY (accessible reference materials — cite and use these as needed):\n' +
+            knowledgeFiles.map(k => `- ${k.title}${k.description ? ': ' + k.description : ''}${k.tags && k.tags.length ? ' [' + k.tags.join(', ') + ']' : ''} — ${k.file_url}`).join('\n');
+        }
+      } catch (e) { /* shared knowledge unavailable */ }
+
       const agentMessages = [
-        { role: 'system', content: agent.system_prompt },
+        { role: 'system', content: agent.system_prompt + sharedLibrary },
         { role: 'user', content: `Task: ${subtask.task}\n${subtask.context ? 'Context: ' + subtask.context : ''}\n\nOverall goal: ${goal}` }
       ];
 
@@ -125,9 +149,13 @@ Deno.serve(async (req) => {
 
       results.push({ agent: agent.name, task: subtask.task, result: agentResult });
       trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'done', preview: agentResult.substring(0, 150) });
+      await base44.entities.Artifact.update(artifact.id, { trace });
     }
 
     // Step 3: Synthesize
+    trace.push({ step: 'Synthesize', description: 'Combining all agent results...', status: 'running' });
+    await base44.entities.Artifact.update(artifact.id, { trace });
+
     const synthesisInput = results.map(r => `Agent: ${r.agent}\nTask: ${r.task}\nResult: ${r.result}`).join('\n\n---\n\n');
     const synthMessages = [
       { role: 'system', content: 'You are a synthesis agent. Combine the results from multiple agents into a cohesive, well-structured final response that addresses the original goal. Use markdown formatting.' },
@@ -146,9 +174,16 @@ Deno.serve(async (req) => {
       summary: `Team goal: ${goal}`
     });
 
-    trace.push({ step: 'Synthesize', description: 'Combined all agent results into final response' });
+    trace.push({ step: 'Synthesize', description: 'Combined all agent results into final response', status: 'done' });
 
-    return Response.json({ conversation_id: conversation.id, final_response: finalResponse, trace });
+    // Finalize the artifact with the completed work
+    await base44.entities.Artifact.update(artifact.id, {
+      content: finalResponse,
+      status: 'completed',
+      trace: trace
+    });
+
+    return Response.json({ conversation_id: conversation.id, artifact_id: artifact.id, final_response: finalResponse, trace });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

@@ -1,0 +1,82 @@
+{
+  "name": "Artifact",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the completed work (derived from the goal)"
+    },
+    "content": {
+      "type": "string",
+      "default": "",
+      "description": "The final synthesized output from the team"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "ID of the team that produced this work"
+    },
+    "team_name": {
+      "type": "string",
+      "description": "Team name for display"
+    },
+    "goal": {
+      "type": "string",
+      "description": "The original goal assigned to the team"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "in_progress",
+        "completed",
+        "failed"
+      ],
+      "default": "in_progress",
+      "description": "Current execution status"
+    },
+    "trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "task": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "preview": {
+            "type": "string"
+          }
+        }
+      },
+      "default": [],
+      "description": "Execution trace steps for real-time progress tracking"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Keywords for categorizing the work"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": null,
+    "delete": null
+  }
+}
