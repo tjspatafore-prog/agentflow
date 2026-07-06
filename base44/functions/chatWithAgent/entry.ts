@@ -237,12 +237,18 @@ Deno.serve(async (req) => {
           { role: 'user', content: `User: ${message}\nAssistant: ${assistantMessage}` }
         ];
         let summary;
+        // Always use a fast, cheap model for memory summaries to avoid timeouts
         if (isGemini) {
-          summary = await callGemini(apiKey, agent.model, summaryMessages, [], null);
+          summary = await callGemini(apiKey, 'gemini-2.5-flash-lite', summaryMessages, [], null);
         } else if (isPerplexity) {
           summary = await callOpenAI(apiKey, 'sonar-pro', summaryMessages, [], null, 'https://api.perplexity.ai/chat/completions');
         } else if (isClaude) {
-          summary = await callClaude(apiKey, agent.model, summaryMessages, [], null);
+          // Use OpenAI's fast model for summaries to avoid the heavy Claude Opus round-trip
+          if (settings.openai_api_key) {
+            summary = await callOpenAI(settings.openai_api_key, 'gpt-4.1-mini', summaryMessages, [], null);
+          } else {
+            summary = await callClaude(apiKey, 'claude-haiku-4-5', summaryMessages, [], null);
+          }
         } else {
           summary = await callOpenAI(apiKey, 'gpt-4.1-mini', summaryMessages, [], null);
         }
