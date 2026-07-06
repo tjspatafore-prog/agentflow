@@ -10,11 +10,29 @@ export default function TeamChat() {
   const [team, setTeam] = useState(null);
   const [agents, setAgents] = useState([]);
   const [goal, setGoal] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [executing, setExecuting] = useState(false);
   const [trace, setTrace] = useState([]);
   const [finalResponse, setFinalResponse] = useState(null);
   const [error, setError] = useState(null);
   const responseRef = useRef(null);
+
+  const handleAttach = async (files) => {
+    for (const file of files) {
+      const tempId = Date.now() + Math.random();
+      setAttachments(prev => [...prev, { id: tempId, name: file.name, uploading: true, url: null }]);
+      try {
+        const res = await base44.integrations.Core.UploadFile({ file });
+        setAttachments(prev => prev.map(a => a.id === tempId ? { ...a, uploading: false, url: res.file_url } : a));
+      } catch (e) {
+        setAttachments(prev => prev.filter(a => a.id !== tempId));
+      }
+    }
+  };
+
+  const handleRemoveAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     base44.entities.Team.get(id).then(async t => {

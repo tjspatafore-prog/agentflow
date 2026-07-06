@@ -6,7 +6,40 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { team_id, goal } = await req.json();
+    const { team_id, goal: _goal, file_urls } = await req.json();
+    let goal = _goal;
+
+    // Process file attachments — extract text content and append to goal
+    if (file_urls && file_urls.length > 0) {
+      for (const fileUrl of file_urls) {
+        const cleanUrl = fileUrl.split('?')[0];
+        const ext = cleanUrl.split('.').pop().toLowerCase();
+        const name = decodeURIComponent(cleanUrl.split('/').pop());
+        if (['mp3', 'wav', 'ogg', 'oga', 'm4a', 'webm', 'mp4', 'mpeg', 'mpga', 'flac'].includes(ext)) {
+          try {
+            const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: fileUrl });
+            goal += `\n\n[Transcribed audio: ${name}]\n${transcript}`;
+          } catch (e) { goal += `\n\n[Audio file attached: ${name}]`; }
+        } else if (['pdf', 'csv', 'xlsx', 'json', 'html', 'txt', 'md', 'doc', 'docx'].includes(ext)) {
+          try {
+            const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
+              file_url: fileUrl,
+              json_schema: { type: 'object', properties: { content: { type: 'string' } } }
+            });
+            if (extractResult.status === 'success' && extractResult.output) {
+              const extracted = typeof extractResult.output === 'string' ? extractResult.output : (extractResult.output.content || JSON.stringify(extractResult.output));
+              goal += `\n\n[File content: ${name}]\n${extracted.substring(0, 5000)}`;
+            } else {
+              goal += `\n\n[File attached: ${name}]`;
+            }
+          } catch (e) { goal += `\n\n[File attached: ${name}]`; }
+        } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+          goal += `\n\n[Image attached: ${name}]`;
+        } else {
+          goal += `\n\n[File attached: ${name}]`;
+        }
+      }
+    }
 
     const team = await base44.entities.Team.get(team_id);
     if (!team) return Response.json({ error: 'Team not found' }, { status: 404 });

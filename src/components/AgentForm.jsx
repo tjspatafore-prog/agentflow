@@ -24,7 +24,7 @@ const MODEL_GROUPS = [
     { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', pricing: '$1 in / $5 out' },
   ]},
   { label: 'Google Gemini', models: [
-    { value: 'gemini-3.1-pro', label: 'Gemini 3.1 Pro', pricing: '$2 in / $12 out' },
+    { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview)', pricing: '$2 in / $12 out' },
     { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', pricing: '$1.50 in / $9 out' },
     { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite', pricing: '$0.10 in / $0.40 out' },
   ]},
