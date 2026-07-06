@@ -52,26 +52,52 @@ export default function TeamChat() {
     setFinalResponse(null);
     setAttachments([]);
 
-    try {
-      // Start polling for in-progress artifacts to show real-time trace updates
-      const pollInterval = setInterval(async () => {
-        try {
-          const recent = await base44.entities.Artifact.filter({ team_id: id }, '-created_date', 1);
-          if (recent.length > 0 && recent[0].trace) {
-            setTrace(recent[0].trace);
-          }
-        } catch (e) { /* poll failed, continue */ }
-      }, 2500);
+    const originalGoal = goal.trim();
+    setGoal('');
 
-      const res = await base44.functions.invoke('executeTeamGoal', { team_id: id, goal: goal.trim(), file_urls: fileUrls });
-      clearInterval(pollInterval);
-      setTrace(res.data.trace || []);
-      setFinalResponse(res.data.final_response);
-      setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    } catch (e) {
-      setError(e.response?.data?.error || e.message);
-    }
-    setExecuting(false);
+    // Snapshot existing artifact IDs so we only track the NEW one being created
+    const existing = await base44.entities.Artifact.filter({ team_id: id }, '-created_date', 50).catch(() => []);
+    const existingIds = new Set(existing.map(a => a.id));
+
+    // Fire the function — don't await; poll the artifact for progress + completion instead.
+    // This avoids frontend HTTP timeouts on long-running multi-agent teams.
+    let earlyError = null;
+    base44.functions.invoke('executeTeamGoal', { team_id: id, goal: originalGoal, file_urls: fileUrls }).catch(e => { earlyError = e.response?.data?.error || e.message; });
+
+    // Poll the Artifact entity for real-time trace + final content
+    let pollCount = 0;
+    const pollInterval = setInterval(async () => {
+      pollCount++;
+      if (pollCount > 120) {
+        clearInterval(pollInterval);
+        setError('Execution timed out. Please try again.');
+        setExecuting(false);
+        return;
+      }
+      try {
+        const recent = await base44.entities.Artifact.filter({ team_id: id }, '-created_date', 5);
+        const newArtifact = recent.find(a => !existingIds.has(a.id));
+        if (!newArtifact) {
+          if (earlyError) {
+            clearInterval(pollInterval);
+            setError(earlyError);
+            setExecuting(false);
+          }
+          return;
+        }
+        if (newArtifact.trace) setTrace([...newArtifact.trace]);
+        if (newArtifact.status === 'completed') {
+          clearInterval(pollInterval);
+          setFinalResponse(newArtifact.content);
+          setExecuting(false);
+          setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        } else if (newArtifact.status === 'failed') {
+          clearInterval(pollInterval);
+          setError('Team execution failed. Please try again.');
+          setExecuting(false);
+        }
+      } catch (e) { /* poll failed, continue */ }
+    }, 2500);
   };
 
   if (!team) return <div className="p-10 text-muted-foreground text-sm">Loading...</div>;
