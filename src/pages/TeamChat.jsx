@@ -43,14 +43,17 @@ export default function TeamChat() {
   }, [id]);
 
   const handleExecute = async () => {
-    if (!goal.trim() || executing) return;
+    const readyAttachments = attachments.filter(a => a.url && !a.uploading);
+    if ((!goal.trim() && readyAttachments.length === 0) || executing) return;
+    const fileUrls = readyAttachments.map(a => a.url);
     setExecuting(true);
     setError(null);
     setTrace([]);
     setFinalResponse(null);
+    setAttachments([]);
 
     try {
-      const res = await base44.functions.invoke('executeTeamGoal', { team_id: id, goal: goal.trim() });
+      const res = await base44.functions.invoke('executeTeamGoal', { team_id: id, goal: goal.trim(), file_urls: fileUrls });
       setTrace(res.data.trace || []);
       setFinalResponse(res.data.final_response);
       setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -85,7 +88,7 @@ export default function TeamChat() {
 
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Assign a Goal</p>
-            <ChatInput value={goal} onChange={setGoal} onSend={handleExecute} disabled={executing} placeholder="Describe what you want the team to accomplish..." />
+            <ChatInput value={goal} onChange={setGoal} onSend={handleExecute} disabled={executing} placeholder="Describe what you want the team to accomplish..." attachments={attachments} onAttach={handleAttach} onRemoveAttachment={handleRemoveAttachment} />
           </div>
 
           {error && (
