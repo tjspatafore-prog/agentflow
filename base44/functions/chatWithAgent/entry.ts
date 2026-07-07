@@ -95,16 +95,17 @@ Deno.serve(async (req) => {
     }
 
     let referenceLibrary = '';
+    const knowledgeFileMap = {}; // cleanName -> original URL for post-processing
     if (agent.knowledge_files && agent.knowledge_files.length > 0) {
       const fileList = agent.knowledge_files.map(url => {
-        const publicUrl = url.replace(/https:\/\/base44\.app\/api\/apps\/[^/]+\/files\/mp\/public\/([^/]+)\//, 'https://media.base44.com/files/public/$1/');
         const rawName = decodeURIComponent(url.split('?')[0].split('/').pop());
-        const cleanName = rawName.replace(/^[a-f0-9]{8,}_/, '').replace(/\.pdf$/i, '').replace(/[_]/g, ' ');
-        return `- ${cleanName}: ${publicUrl}`;
+        const cleanName = rawName.replace(/^[a-f0-9]{8,}_/, '').replace(/\.pdf$/i, '').replace(/\.docx$/i, '').replace(/[_]/g, ' ');
+        knowledgeFileMap[cleanName.toLowerCase()] = url;
+        return `- ${cleanName}: ${url}`;
       });
       referenceLibrary = '\n\nREFERENCE LIBRARY (downloadable PDFs — share the direct URL when recommending reading material):\n' + fileList.join('\n');
     }
-    const citationInstruction = '\n\nCITATION & SHARING PROTOCOL:\n1. When referencing information from your knowledge files, include a brief discrete inline citation — e.g., "as outlined in the CBT Workshop manual (p. 12)". Keep it short and inline. Do NOT append a bibliography or source list unless the user explicitly asks for sources.\n2. When recommending a PDF or devotional, ALWAYS include the direct download URL from your Reference Library so the user can access it.';
+    const citationInstruction = '\n\nCITATION & SHARING PROTOCOL:\n1. When referencing information from your knowledge files, include a brief discrete inline citation — e.g., "as outlined in the CBT Workshop manual (p. 12)". Keep it short and inline. Do NOT append a bibliography or source list unless the user explicitly asks for sources.\n2. When recommending a PDF or devotional, simply mention the devotional by name. The download link will be attached automatically — do NOT paste URLs yourself.';
 
     const orgTonePrefix = orgSettings.org_tone ? 'ORGANIZATION TONE GUIDELINES (apply to all responses):\n' + orgSettings.org_tone + '\n\n' : '';
     const emergencyInstruction = orgSettings.emergency_keywords && orgSettings.emergency_keywords.length > 0 ? '\n\nIMPORTANT SAFETY PROTOCOL: If the user expresses thoughts of self-harm, suicide, or crisis, prioritize their safety above all else. Encourage them to contact 988 (Suicide & Crisis Lifeline) or emergency services immediately. Do not attempt to provide therapy for acute crisis situations.' : '';
@@ -203,6 +204,23 @@ Deno.serve(async (req) => {
     }
 
     if (!assistantMessage) assistantMessage = 'I was unable to complete this request. Please try again.';
+
+    // Post-process: scan the response for mentions of knowledge file names and append download links
+    if (Object.keys(knowledgeFileMap).length > 0) {
+      const lowerResponse = assistantMessage.toLowerCase();
+      const matchedFiles = [];
+      for (const [cleanName, url] of Object.entries(knowledgeFileMap)) {
+        if (lowerResponse.includes(cleanName)) {
+          matchedFiles.push({ name: cleanName, url });
+        }
+      }
+      if (matchedFiles.length > 0) {
+        // Remove any raw URLs the LLM may have pasted (they're often broken)
+        assistantMessage = assistantMessage.replace(/https?:\/\/[^\s)]+/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+        const links = matchedFiles.map(f => `📄 [${f.name}](${f.url})`).join('\n');
+        assistantMessage += `\n\n---\n**Download:**\n${links}`;
+      }
+    }
 
     let emergencyDetected = false;
     if (orgSettings.emergency_keywords && orgSettings.emergency_keywords.length > 0) {
