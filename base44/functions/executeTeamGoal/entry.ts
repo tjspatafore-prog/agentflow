@@ -1,8 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
+  let artifactId = null;
+  let base44 = null;
   try {
-    const base44 = createClientFromRequest(req);
+    base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -67,6 +69,7 @@ Deno.serve(async (req) => {
       status: 'in_progress',
       trace: []
     });
+    artifactId = artifact.id;
 
     const conversation = await base44.entities.Conversation.create({
       title: goal.substring(0, 50),
@@ -185,6 +188,15 @@ Deno.serve(async (req) => {
 
     return Response.json({ conversation_id: conversation.id, artifact_id: artifact.id, final_response: finalResponse, trace });
   } catch (error) {
+    // Mark the artifact as failed so it doesn't stay stuck at "in_progress" forever
+    if (artifactId) {
+      try {
+        await base44.entities.Artifact.update(artifactId, {
+          status: 'failed',
+          content: `Execution failed: ${error.message}`
+        });
+      } catch (e) { /* best-effort */ }
+    }
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
