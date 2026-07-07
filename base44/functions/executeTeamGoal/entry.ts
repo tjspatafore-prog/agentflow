@@ -55,10 +55,6 @@ Deno.serve(async (req) => {
     const hasGemini = !!settings.google_api_key;
     if (!hasOpenAI && !hasGemini) return Response.json({ error: 'No API keys configured. Please add them in Settings.' }, { status: 400 });
 
-    const orchIsGemini = !hasOpenAI;
-    const orchModel = hasOpenAI ? 'gpt-5.4' : 'gemini-2.5-flash-lite';
-    const orchApiKey = hasOpenAI ? settings.openai_api_key : settings.google_api_key;
-
     // Create Artifact record immediately for progress tracking
     const artifact = await base44.entities.Artifact.create({
       title: goal.substring(0, 80),
@@ -77,119 +73,79 @@ Deno.serve(async (req) => {
       messages: [{ role: 'user', content: goal, timestamp: new Date().toISOString() }]
     });
 
-    const trace = [];
+    // Auto-retry loop: each attempt uses a progressively simpler/different strategy
+    const maxAttempts = 3;
+    let lastError = null;
 
-    // Step 1: Decompose
-    const agentDescriptions = agents.map((a, i) => `Agent ${i + 1}: ${a.name} - ${a.role_description}`).join('\n');
-    const decomposeMessages = [
-      { role: 'system', content: 'You are a task orchestrator. Given a goal and a team of agents, decompose the goal into sub-tasks and assign each to the most appropriate agent. Return JSON with a "subtasks" array, each having "agent_name", "task", and "context" fields.' },
-      { role: 'user', content: `Goal: ${goal}\n\nAvailable agents:\n${agentDescriptions}` }
-    ];
-
-    let decomposeText;
-    if (orchIsGemini) {
-      decomposeText = await callGeminiSimple(orchApiKey, orchModel, decomposeMessages);
-    } else {
-      decomposeText = await callOpenAISimple(orchApiKey, orchModel, decomposeMessages, true);
-    }
-
-    let subtasks;
-    try {
-      const parsed = JSON.parse(decomposeText);
-      subtasks = parsed.subtasks || parsed.tasks || [];
-      if (!Array.isArray(subtasks)) subtasks = [subtasks];
-    } catch (e) {
-      subtasks = agents.map(a => ({ agent_name: a.name, task: goal, context: '' }));
-    }
-
-    trace.push({ step: 'Plan', description: `Decomposed goal into ${subtasks.length} sub-tasks`, subtasks: subtasks.map(s => ({ agent: s.agent_name, task: s.task })) });
-    await base44.entities.Artifact.update(artifact.id, { trace });
-
-    // Step 2: Execute each sub-task
-    const results = [];
-    for (const subtask of subtasks) {
-      const agent = agents.find(a => a.name === subtask.agent_name) || agents[0];
-      trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'running' });
-      await base44.entities.Artifact.update(artifact.id, { trace });
-
-      const isGemini = agent.model && agent.model.startsWith('gemini');
-      const isPerplexity = agent.model && agent.model.startsWith('sonar');
-      const isClaude = agent.model && agent.model.startsWith('claude');
-      const agentApiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : isClaude ? settings.anthropic_api_key : settings.openai_api_key;
-
-      if (!agentApiKey) {
-        results.push({ agent: agent.name, task: subtask.task, result: `Error: ${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : isClaude ? 'Anthropic' : 'OpenAI'} API key not configured` });
-        trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'done', preview: 'API key not configured' });
-        await base44.entities.Artifact.update(artifact.id, { trace });
-        continue;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      // Check if user cancelled before starting this attempt
+      const current = await base44.entities.Artifact.get(artifactId);
+      if (current.cancelled) {
+        await base44.entities.Artifact.update(artifactId, { status: 'failed', content: 'Cancelled by user' });
+        return Response.json({ error: 'Execution cancelled by user', artifact_id: artifactId });
       }
 
-      // Build shared knowledge context from the SharedKnowledgeBase library
-      let sharedLibrary = '';
+      let trace = [...(current.trace || [])];
+      trace.push({
+        step: attempt === 1 ? 'Start' : `Retry ${attempt}`,
+        description: attempt === 1 ? 'Starting execution' : `Retrying with a different approach (attempt ${attempt} of ${maxAttempts})...`,
+        status: 'running'
+      });
+      await base44.entities.Artifact.update(artifactId, { trace });
+
       try {
-        const knowledgeFiles = await base44.entities.SharedKnowledgeBase.list('-created_date', 10);
-        if (knowledgeFiles.length > 0) {
-          sharedLibrary = '\n\nSHARED KNOWLEDGE LIBRARY (accessible reference materials — cite and use these as needed):\n' +
-            knowledgeFiles.map(k => `- ${k.title}${k.description ? ': ' + k.description : ''}${k.tags && k.tags.length ? ' [' + k.tags.join(', ') + ']' : ''} — ${k.file_url}`).join('\n');
+        const finalResponse = await executeAttempt(base44, agents, goal, settings, attempt, artifactId);
+
+        // Success — finalize
+        const latest = await base44.entities.Artifact.get(artifactId);
+        trace = [...(latest.trace || [])];
+        trace.push({ step: 'Complete', description: 'Goal accomplished', status: 'done' });
+
+        await base44.entities.Conversation.update(conversation.id, {
+          messages: [...conversation.messages, { role: 'assistant', content: finalResponse, timestamp: new Date().toISOString() }],
+          summary: `Team goal: ${goal}`
+        });
+
+        await base44.entities.Artifact.update(artifactId, {
+          content: finalResponse,
+          status: 'completed',
+          trace
+        });
+
+        return Response.json({ conversation_id: conversation.id, artifact_id: artifactId, final_response: finalResponse, trace });
+      } catch (attemptError) {
+        // If user cancelled mid-attempt, stop immediately
+        if (attemptError.message === 'Cancelled by user') {
+          await base44.entities.Artifact.update(artifactId, { status: 'failed', content: 'Cancelled by user' });
+          return Response.json({ error: 'Execution cancelled by user', artifact_id: artifactId });
         }
-      } catch (e) { /* shared knowledge unavailable */ }
 
-      const agentMessages = [
-        { role: 'system', content: agent.system_prompt + sharedLibrary },
-        { role: 'user', content: `Task: ${subtask.task}\n${subtask.context ? 'Context: ' + subtask.context : ''}\n\nOverall goal: ${goal}` }
-      ];
+        lastError = attemptError;
+        const latest = await base44.entities.Artifact.get(artifactId);
+        trace = [...(latest.trace || [])];
+        trace.push({ step: `Attempt ${attempt}`, description: `Failed: ${attemptError.message}`, status: 'failed' });
+        await base44.entities.Artifact.update(artifactId, { trace });
 
-      let agentResult;
-      if (isGemini) {
-        agentResult = await callGeminiSimple(agentApiKey, agent.model, agentMessages);
-      } else if (isPerplexity) {
-        agentResult = await callOpenAISimple(agentApiKey, agent.model, agentMessages, false, 'https://api.perplexity.ai/chat/completions');
-      } else if (isClaude) {
-        agentResult = await callClaudeSimple(agentApiKey, agent.model, agentMessages);
-      } else {
-        agentResult = await callOpenAISimple(agentApiKey, agent.model, agentMessages, false);
+        // If not the last attempt, wait and check for cancellation before retrying
+        if (attempt < maxAttempts) {
+          await new Promise(r => setTimeout(r, 2000 * attempt));
+          const checkCancel = await base44.entities.Artifact.get(artifactId);
+          if (checkCancel.cancelled) {
+            await base44.entities.Artifact.update(artifactId, { status: 'failed', content: 'Cancelled by user' });
+            return Response.json({ error: 'Execution cancelled by user', artifact_id: artifactId });
+          }
+        }
       }
-
-      results.push({ agent: agent.name, task: subtask.task, result: agentResult });
-      trace.push({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'done', preview: agentResult.substring(0, 150) });
-      await base44.entities.Artifact.update(artifact.id, { trace });
     }
 
-    // Step 3: Synthesize
-    trace.push({ step: 'Synthesize', description: 'Combining all agent results...', status: 'running' });
-    await base44.entities.Artifact.update(artifact.id, { trace });
-
-    const synthesisInput = results.map(r => `Agent: ${r.agent}\nTask: ${r.task}\nResult: ${r.result}`).join('\n\n---\n\n');
-    const synthMessages = [
-      { role: 'system', content: 'You are a synthesis agent. Combine the results from multiple agents into a cohesive, well-structured final response that addresses the original goal. Use markdown formatting.' },
-      { role: 'user', content: `Original goal: ${goal}\n\nAgent results:\n${synthesisInput}` }
-    ];
-
-    let finalResponse;
-    if (orchIsGemini) {
-      finalResponse = await callGeminiSimple(orchApiKey, orchModel, synthMessages);
-    } else {
-      finalResponse = await callOpenAISimple(orchApiKey, orchModel, synthMessages, false);
-    }
-
-    await base44.entities.Conversation.update(conversation.id, {
-      messages: [...conversation.messages, { role: 'assistant', content: finalResponse, timestamp: new Date().toISOString() }],
-      summary: `Team goal: ${goal}`
+    // All attempts exhausted
+    await base44.entities.Artifact.update(artifactId, {
+      status: 'failed',
+      content: `Execution failed after ${maxAttempts} attempts. Last error: ${lastError?.message || 'Unknown error'}`
     });
-
-    trace.push({ step: 'Synthesize', description: 'Combined all agent results into final response', status: 'done' });
-
-    // Finalize the artifact with the completed work
-    await base44.entities.Artifact.update(artifact.id, {
-      content: finalResponse,
-      status: 'completed',
-      trace: trace
-    });
-
-    return Response.json({ conversation_id: conversation.id, artifact_id: artifact.id, final_response: finalResponse, trace });
+    return Response.json({ error: lastError?.message || 'All attempts failed', artifact_id: artifactId }, { status: 500 });
   } catch (error) {
-    // Mark the artifact as failed so it doesn't stay stuck at "in_progress" forever
-    if (artifactId) {
+    if (artifactId && base44) {
       try {
         await base44.entities.Artifact.update(artifactId, {
           status: 'failed',
@@ -200,6 +156,165 @@ Deno.serve(async (req) => {
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
+
+// Execute one full attempt: decompose → execute subtasks → synthesize
+// Strategy varies by attempt number for genuinely different retry approaches
+async function executeAttempt(base44, agents, goal, settings, attempt, artifactId) {
+  const hasOpenAI = !!settings.openai_api_key;
+  const orchModel = hasOpenAI ? 'gpt-5.4' : 'gemini-2.5-flash-lite';
+  const orchApiKey = hasOpenAI ? settings.openai_api_key : settings.google_api_key;
+  const orchIsGemini = !hasOpenAI;
+
+  // Strategy per attempt:
+  // 1: Full decomposition + shared knowledge + each agent's configured model
+  // 2: Skip shared knowledge (reduces context/tokens) + fallback to cheaper model on failure
+  // 3: No decomposition — assign full goal directly to each agent, use cheapest available model
+  const skipSharedKnowledge = attempt >= 2;
+  const skipDecomposition = attempt >= 3;
+  const useFallbackModels = attempt >= 2;
+
+  // Initialize trace from the artifact so we append to existing history
+  const currentArtifact = await base44.entities.Artifact.get(artifactId);
+  let trace = [...(currentArtifact.trace || [])];
+  const pushTrace = async (step) => {
+    trace.push(step);
+    await base44.entities.Artifact.update(artifactId, { trace });
+  };
+
+  // Build shared knowledge context (skip on retries to reduce context size)
+  let sharedLibrary = '';
+  if (!skipSharedKnowledge) {
+    try {
+      const knowledgeFiles = await base44.entities.SharedKnowledgeBase.list('-created_date', 10);
+      if (knowledgeFiles.length > 0) {
+        sharedLibrary = '\n\nSHARED KNOWLEDGE LIBRARY (accessible reference materials — cite and use these as needed):\n' +
+          knowledgeFiles.map(k => `- ${k.title}${k.description ? ': ' + k.description : ''}${k.tags && k.tags.length ? ' [' + k.tags.join(', ') + ']' : ''} — ${k.file_url}`).join('\n');
+      }
+    } catch (e) { /* shared knowledge unavailable */ }
+  }
+
+  let subtasks;
+  if (skipDecomposition) {
+    // Attempt 3+: skip the orchestrator entirely, assign the full goal to each agent
+    subtasks = agents.map(a => ({ agent_name: a.name, task: goal, context: '' }));
+    await pushTrace({ step: 'Plan', description: `Attempt ${attempt}: Assigned full goal directly to all ${agents.length} agents (no decomposition)`, subtasks: subtasks.map(s => ({ agent: s.agent_name, task: 'Full goal' })) });
+  } else {
+    // Decompose
+    const agentDescriptions = agents.map((a, i) => `Agent ${i + 1}: ${a.name} - ${a.role_description}`).join('\n');
+    const decomposeMessages = [
+      { role: 'system', content: 'You are a task orchestrator. Given a goal and a team of agents, decompose the goal into sub-tasks and assign each to the most appropriate agent. Return JSON with a "subtasks" array, each having "agent_name", "task", and "context" fields.' },
+      { role: 'user', content: `Goal: ${goal}\n\nAvailable agents:\n${agentDescriptions}` }
+    ];
+
+    let decomposeText;
+    if (orchIsGemini) {
+      decomposeText = await callWithRetry(() => callGeminiSimple(orchApiKey, orchModel, decomposeMessages));
+    } else {
+      decomposeText = await callWithRetry(() => callOpenAISimple(orchApiKey, orchModel, decomposeMessages, true));
+    }
+
+    try {
+      const parsed = JSON.parse(decomposeText);
+      subtasks = parsed.subtasks || parsed.tasks || [];
+      if (!Array.isArray(subtasks)) subtasks = [subtasks];
+    } catch (e) {
+      subtasks = agents.map(a => ({ agent_name: a.name, task: goal, context: '' }));
+    }
+
+    await pushTrace({ step: 'Plan', description: `Attempt ${attempt}: Decomposed goal into ${subtasks.length} sub-tasks${skipSharedKnowledge ? ' (reduced context)' : ''}`, subtasks: subtasks.map(s => ({ agent: s.agent_name, task: s.task })) });
+  }
+
+  // Execute each sub-task
+  const results = [];
+  for (const subtask of subtasks) {
+    // Check if user cancelled between subtasks
+    const checkCancel = await base44.entities.Artifact.get(artifactId);
+    if (checkCancel.cancelled) throw new Error('Cancelled by user');
+
+    const agent = agents.find(a => a.name === subtask.agent_name) || agents[0];
+    await pushTrace({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'running' });
+
+    let agentResult;
+    try {
+      agentResult = await callAgentLLM(agent, settings, subtask, goal, sharedLibrary, useFallbackModels);
+    } catch (agentError) {
+      await pushTrace({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'failed', preview: agentError.message });
+      throw new Error(`Agent "${agent.name}" failed: ${agentError.message}`);
+    }
+
+    results.push({ agent: agent.name, task: subtask.task, result: agentResult });
+    await pushTrace({ step: 'Execute', agent: agent.name, task: subtask.task, status: 'done', preview: agentResult.substring(0, 150) });
+  }
+
+  // Synthesize
+  await pushTrace({ step: 'Synthesize', description: 'Combining all agent results...', status: 'running' });
+
+  const synthesisInput = results.map(r => `Agent: ${r.agent}\nTask: ${r.task}\nResult: ${r.result}`).join('\n\n---\n\n');
+  const synthMessages = [
+    { role: 'system', content: 'You are a synthesis agent. Combine the results from multiple agents into a cohesive, well-structured final response that addresses the original goal. Use markdown formatting.' },
+    { role: 'user', content: `Original goal: ${goal}\n\nAgent results:\n${synthesisInput}` }
+  ];
+
+  let finalResponse;
+  if (orchIsGemini) {
+    finalResponse = await callWithRetry(() => callGeminiSimple(orchApiKey, orchModel, synthMessages));
+  } else {
+    finalResponse = await callWithRetry(() => callOpenAISimple(orchApiKey, orchModel, synthMessages, false));
+  }
+
+  await pushTrace({ step: 'Synthesize', description: 'Combined all agent results into final response', status: 'done' });
+
+  return finalResponse;
+}
+
+// Call an LLM with the agent's configured model; on attempt 2+, fall back to a cheaper model if it fails
+async function callAgentLLM(agent, settings, subtask, goal, sharedLibrary, useFallbackModels) {
+  const agentMessages = [
+    { role: 'system', content: agent.system_prompt + sharedLibrary },
+    { role: 'user', content: `Task: ${subtask.task}\n${subtask.context ? 'Context: ' + subtask.context : ''}\n\nOverall goal: ${goal}` }
+  ];
+
+  const isGemini = agent.model && agent.model.startsWith('gemini');
+  const isPerplexity = agent.model && agent.model.startsWith('sonar');
+  const isClaude = agent.model && agent.model.startsWith('claude');
+  const agentApiKey = isGemini ? settings.google_api_key : isPerplexity ? settings.perplexity_api_key : isClaude ? settings.anthropic_api_key : settings.openai_api_key;
+
+  // Try the agent's configured model first (with per-call retry)
+  if (agentApiKey) {
+    try {
+      if (isGemini) return await callWithRetry(() => callGeminiSimple(agentApiKey, agent.model, agentMessages));
+      if (isPerplexity) return await callWithRetry(() => callOpenAISimple(agentApiKey, agent.model, agentMessages, false, 'https://api.perplexity.ai/chat/completions'));
+      if (isClaude) return await callWithRetry(() => callClaudeSimple(agentApiKey, agent.model, agentMessages));
+      return await callWithRetry(() => callOpenAISimple(agentApiKey, agent.model, agentMessages, false));
+    } catch (e) {
+      // On attempt 1, throw to trigger a full retry. On attempt 2+, fall through to fallback.
+      if (!useFallbackModels) throw e;
+    }
+  }
+
+  // Fallback to the cheapest reliable model available
+  if (settings.openai_api_key) {
+    return await callWithRetry(() => callOpenAISimple(settings.openai_api_key, 'gpt-4.1-mini', agentMessages, false));
+  }
+  if (settings.google_api_key) {
+    return await callWithRetry(() => callGeminiSimple(settings.google_api_key, 'gemini-2.5-flash-lite', agentMessages));
+  }
+  throw new Error(`${isGemini ? 'Google' : isPerplexity ? 'Perplexity' : isClaude ? 'Anthropic' : 'OpenAI'} API key not configured`);
+}
+
+// Retry a function call with exponential backoff (handles transient API failures)
+async function callWithRetry(fn, maxRetries = 1) {
+  let lastError;
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastError = e;
+      if (i < maxRetries) await new Promise(r => setTimeout(r, 3000 * (i + 1)));
+    }
+  }
+  throw lastError;
+}
 
 async function callOpenAISimple(apiKey, model, messages, jsonMode, baseUrl) {
   const body = { model, messages };

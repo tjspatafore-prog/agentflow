@@ -33,6 +33,11 @@
       "default": "in_progress",
       "description": "Current execution status"
     },
+    "cancelled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user cancelled execution"
+    },
     "trace": {
       "type": "array",
       "items": {

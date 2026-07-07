@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { ArrowLeft, Loader2, CheckCircle2, Circle, Sparkles } from 'lucide-react';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
+import { Button } from '@/components/ui/button';
 
 export default function TeamChat() {
   const { id } = useParams();
@@ -15,6 +16,7 @@ export default function TeamChat() {
   const [trace, setTrace] = useState([]);
   const [finalResponse, setFinalResponse] = useState(null);
   const [error, setError] = useState(null);
+  const [artifactId, setArtifactId] = useState(null);
   const responseRef = useRef(null);
 
   const handleAttach = async (files) => {
@@ -34,6 +36,13 @@ export default function TeamChat() {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleCancel = async () => {
+    if (!artifactId) return;
+    try {
+      await base44.entities.Artifact.update(artifactId, { cancelled: true });
+    } catch (e) { /* best-effort */ }
+  };
+
   useEffect(() => {
     base44.entities.Team.get(id).then(async t => {
       setTeam(t);
@@ -50,6 +59,7 @@ export default function TeamChat() {
     setError(null);
     setTrace([]);
     setFinalResponse(null);
+    setArtifactId(null);
     setAttachments([]);
 
     const originalGoal = goal.trim();
@@ -85,7 +95,14 @@ export default function TeamChat() {
           }
           return;
         }
+        if (newArtifact.id) setArtifactId(newArtifact.id);
         if (newArtifact.trace) setTrace([...newArtifact.trace]);
+        if (newArtifact.cancelled) {
+          clearInterval(pollInterval);
+          setError('Execution cancelled.');
+          setExecuting(false);
+          return;
+        }
         if (newArtifact.status === 'completed') {
           clearInterval(pollInterval);
           setFinalResponse(newArtifact.content);
@@ -93,7 +110,7 @@ export default function TeamChat() {
           setTimeout(() => responseRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         } else if (newArtifact.status === 'failed') {
           clearInterval(pollInterval);
-          setError('Team execution failed. Please try again.');
+          setError(newArtifact.content || 'Team execution failed after multiple attempts. Please try again.');
           setExecuting(false);
         }
       } catch (e) { /* poll failed, continue */ }
@@ -130,6 +147,12 @@ export default function TeamChat() {
 
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</div>
+          )}
+
+          {executing && artifactId && (
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={handleCancel} className="text-destructive">Cancel Execution</Button>
+            </div>
           )}
 
           {trace.length > 0 && (
