@@ -95,12 +95,14 @@ Deno.serve(async (req) => {
     }
 
     let referenceLibrary = '';
-    const knowledgeFileMap = {}; // cleanName -> original URL for post-processing
+    const knowledgeFiles = []; // { name, url, keywords } for post-processing
     if (agent.knowledge_files && agent.knowledge_files.length > 0) {
+      const stopWords = ['30day', '360day', '365day', 'complete', 'devotional', 'catalog', 'consciousness', 'file', 'book', 'vol', 'volume', 'single', 'v2', 'update', 'textbook', 'the', 'and', 'for', 'of', 'to', 'in', 'day', 'phanerosis', 'nexus'];
       const fileList = agent.knowledge_files.map(url => {
         const rawName = decodeURIComponent(url.split('?')[0].split('/').pop());
         const cleanName = rawName.replace(/^[a-f0-9]{8,}_/, '').replace(/\.pdf$/i, '').replace(/\.docx$/i, '').replace(/[_]/g, ' ');
-        knowledgeFileMap[cleanName.toLowerCase()] = url;
+        const keywords = cleanName.toLowerCase().split(/[\s]+/).filter(w => w.length > 2 && !stopWords.includes(w));
+        knowledgeFiles.push({ name: cleanName, url, keywords });
         return `- ${cleanName}: ${url}`;
       });
       referenceLibrary = '\n\nREFERENCE LIBRARY (downloadable PDFs — share the direct URL when recommending reading material):\n' + fileList.join('\n');
@@ -205,20 +207,27 @@ Deno.serve(async (req) => {
 
     if (!assistantMessage) assistantMessage = 'I was unable to complete this request. Please try again.';
 
-    // Post-process: scan the response for mentions of knowledge file names and append download links
-    if (Object.keys(knowledgeFileMap).length > 0) {
+    // Post-process: always strip LLM-pasted URLs (often broken), then match keywords to append correct download links
+    if (knowledgeFiles.length > 0) {
+      // Convert markdown links to just the text, then strip any remaining bare URLs
+      assistantMessage = assistantMessage
+        .replace(/\[([^\]]*)\]\(https?:\/\/[^\s)]*\)/gi, '$1')
+        .replace(/https?:\/\/[^\s)]+/gi, '')
+        // Clean up download labels/emojis left dangling after URL removal
+        .replace(/[👉📥🔗]\s*/g, '')
+        .replace(/\*\*(?:Download|Get it|Link)(?:s)?:?\*\*\s*/gi, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
       const lowerResponse = assistantMessage.toLowerCase();
       const matchedFiles = [];
-      for (const [cleanName, url] of Object.entries(knowledgeFileMap)) {
-        if (lowerResponse.includes(cleanName)) {
-          matchedFiles.push({ name: cleanName, url });
+      for (const file of knowledgeFiles) {
+        if (file.keywords.some(kw => lowerResponse.includes(kw))) {
+          matchedFiles.push(file);
         }
       }
       if (matchedFiles.length > 0) {
-        // Remove any raw URLs the LLM may have pasted (they're often broken)
-        assistantMessage = assistantMessage.replace(/https?:\/\/[^\s)]+/gi, '').replace(/\n{3,}/g, '\n\n').trim();
-        const links = matchedFiles.map(f => `📄 [${f.name}](${f.url})`).join('\n');
-        assistantMessage += `\n\n---\n**Download:**\n${links}`;
+        const links = matchedFiles.map(f => `📄 ${f.name} — ${f.url}`).join('\n');
+        assistantMessage += `\n\n---\nDownload:\n${links}`;
       }
     }
 
