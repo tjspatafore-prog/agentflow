@@ -11,9 +11,8 @@ Deno.serve(async (req) => {
     const agent = await base44.entities.Agent.get(agent_id);
     if (!agent) return Response.json({ error: 'Agent not found' }, { status: 404 });
 
-    if (user.role !== 'admin' && !(agent.assigned_user_ids || []).includes(user.id)) {
-      return Response.json({ error: 'You do not have access to this agent' }, { status: 403 });
-    }
+    // All users can access all agents — WhatsApp users connect to the admin's agents directly
+    // (the nexus_assistant gateway handles routing)
 
     const settingsList = await base44.entities.AppSettings.list();
     const settings = settingsList[0] || {};
