@@ -130,20 +130,51 @@ Deno.serve(async (req) => {
           } catch (e) {
             userText += `\n\n[Audio file attached: ${name}]`;
           }
-        } else if (['pdf', 'csv', 'xlsx', 'json', 'html', 'txt', 'md', 'doc', 'docx'].includes(ext)) {
+        } else if (['txt', 'md'].includes(ext)) {
+          // Plain text files — fetch content directly
+          try {
+            const textRes = await fetch(fileUrl);
+            if (textRes.ok) {
+              const text = await textRes.text();
+              userText += `\n\n[File content: ${name}]\n${text.substring(0, 8000)}`;
+            } else {
+              userText += `\n\n[File attached: ${name}]`;
+            }
+          } catch (e) {
+            userText += `\n\n[File attached: ${name}]`;
+          }
+        } else if (['pdf', 'csv', 'xlsx', 'json', 'html'].includes(ext)) {
+          // Formats supported by ExtractDataFromUploadedFile
           try {
             const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
               file_url: fileUrl,
               json_schema: { type: 'object', properties: { content: { type: 'string' } } }
             });
             if (extractResult.status === 'success' && extractResult.output) {
-              const extracted = typeof extractResult.output === 'string' ? extractResult.output : JSON.stringify(extractResult.output);
-              userText += `\n\n[File content: ${name}]\n${extracted.substring(0, 5000)}`;
+              const extracted = typeof extractResult.output === 'string' ? extractResult.output : (extractResult.output.content || JSON.stringify(extractResult.output));
+              userText += `\n\n[File content: ${name}]\n${extracted.substring(0, 8000)}`;
             } else {
               userText += `\n\n[File attached: ${name}]`;
             }
           } catch (e) {
             userText += `\n\n[File attached: ${name}]`;
+          }
+        } else if (['doc', 'docx'].includes(ext)) {
+          // Word documents — not supported by ExtractDataFromUploadedFile, use InvokeLLM to read them
+          try {
+            const llmResult = await base44.integrations.Core.InvokeLLM({
+              prompt: `Read and extract the full text content of the attached document. Return only the extracted text, preserving structure and formatting where possible.`,
+              file_urls: [fileUrl],
+              response_json_schema: { type: 'object', properties: { content: { type: 'string' } } }
+            });
+            const extracted = typeof llmResult === 'string' ? llmResult : (llmResult.content || JSON.stringify(llmResult));
+            if (extracted && extracted.length > 10) {
+              userText += `\n\n[File content: ${name}]\n${extracted.substring(0, 8000)}`;
+            } else {
+              userText += `\n\n[File attached: ${name} — content could not be extracted. Ask the user to convert to PDF.]`;
+            }
+          } catch (e) {
+            userText += `\n\n[File attached: ${name} — content could not be extracted. Ask the user to convert to PDF.]`;
           }
         } else {
           userText += `\n\n[File attached: ${name}]`;
