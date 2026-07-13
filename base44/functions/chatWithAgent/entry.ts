@@ -224,15 +224,21 @@ Deno.serve(async (req) => {
       return { error: 'Unknown tool' };
     };
 
-    let assistantMessage;
-    if (isGemini) {
-      assistantMessage = await callGemini(apiKey, agent.model, chatMessages, tools, executeTool);
-    } else if (isPerplexity) {
-      assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool, 'https://api.perplexity.ai/chat/completions');
-    } else if (isClaude) {
-      assistantMessage = await callClaude(apiKey, agent.model, chatMessages, tools, executeTool);
-    } else {
-      assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool);
+    let assistantMessage = '';
+    let llmAttempts = 0;
+    const maxLLMAttempts = 3;
+    while (!assistantMessage && llmAttempts < maxLLMAttempts) {
+      llmAttempts++;
+      if (llmAttempts > 1) await new Promise(r => setTimeout(r, 2000));
+      if (isGemini) {
+        assistantMessage = await callGemini(apiKey, agent.model, chatMessages, tools, executeTool);
+      } else if (isPerplexity) {
+        assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool, 'https://api.perplexity.ai/chat/completions');
+      } else if (isClaude) {
+        assistantMessage = await callClaude(apiKey, agent.model, chatMessages, tools, executeTool);
+      } else {
+        assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool);
+      }
     }
 
     if (!assistantMessage) assistantMessage = 'I was unable to complete this request. Please try again.';
