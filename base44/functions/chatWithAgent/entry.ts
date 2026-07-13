@@ -102,9 +102,9 @@ Deno.serve(async (req) => {
         const cleanName = rawName.replace(/^[a-f0-9]{8,}_/, '').replace(/\.pdf$/i, '').replace(/\.docx$/i, '').replace(/[_]/g, ' ');
         const keywords = cleanName.toLowerCase().split(/[\s]+/).filter(w => w.length > 2 && !stopWords.includes(w));
         knowledgeFiles.push({ name: cleanName, url, keywords });
-        return `- ${cleanName}: ${url}`;
+        return `- ${cleanName}`;
       });
-      referenceLibrary = '\n\nREFERENCE LIBRARY (downloadable PDFs — share the direct URL when recommending reading material):\n' + fileList.join('\n');
+      referenceLibrary = '\n\nREFERENCE LIBRARY (available reading material — mention by name when recommending; download links are attached automatically):\n' + fileList.join('\n');
     }
     const citationInstruction = '\n\nCITATION & SHARING PROTOCOL:\n1. When referencing information from your knowledge files, include a brief discrete inline citation — e.g., "as outlined in the CBT Workshop manual (p. 12)". Keep it short and inline. Do NOT append a bibliography or source list unless the user explicitly asks for sources.\n2. When recommending a PDF or devotional, simply mention the devotional by name. The download link will be attached automatically — do NOT paste URLs yourself.';
 
@@ -192,9 +192,11 @@ Deno.serve(async (req) => {
       userMessage = { role: 'user', content: userText };
     }
 
+    const maxHistory = 20;
+    const recentHistory = conversation.messages.slice(-maxHistory);
     const chatMessages = [
       { role: 'system', content: systemContent },
-      ...conversation.messages.map(m => ({ role: m.role, content: m.content })),
+      ...recentHistory.map(m => ({ role: m.role, content: m.content })),
       userMessage
     ];
 
@@ -226,7 +228,7 @@ Deno.serve(async (req) => {
 
     let assistantMessage = '';
     let llmAttempts = 0;
-    const maxLLMAttempts = 3;
+    const maxLLMAttempts = 2;
     while (!assistantMessage && llmAttempts < maxLLMAttempts) {
       llmAttempts++;
       if (llmAttempts > 1) await new Promise(r => setTimeout(r, 2000));
@@ -239,6 +241,12 @@ Deno.serve(async (req) => {
       } else {
         assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool);
       }
+    }
+
+    if (!assistantMessage && settings.openai_api_key && !isPerplexity) {
+      try {
+        assistantMessage = await callOpenAI(settings.openai_api_key, 'gpt-4.1-mini', chatMessages, tools, executeTool);
+      } catch (e) { /* fallback failed */ }
     }
 
     if (!assistantMessage) assistantMessage = 'I was unable to complete this request. Please try again.';
@@ -293,7 +301,7 @@ Deno.serve(async (req) => {
     ];
     await base44.entities.Conversation.update(conversation.id, { messages: updatedMessages });
 
-    if (agent.tools_enabled?.memory) {
+    if (agent.tools_enabled?.memory && conversation.messages.length > 0 && conversation.messages.length % 5 === 0) {
       try {
         const summaryMessages = [
           { role: 'system', content: 'Summarize the key facts, preferences, and context from this conversation exchange that would be useful to remember for future conversations. Be concise (2-3 sentences max).' },
