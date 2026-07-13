@@ -229,17 +229,23 @@ Deno.serve(async (req) => {
     let assistantMessage = '';
     let llmAttempts = 0;
     const maxLLMAttempts = 2;
+    let lastLLMError = null;
     while (!assistantMessage && llmAttempts < maxLLMAttempts) {
       llmAttempts++;
       if (llmAttempts > 1) await new Promise(r => setTimeout(r, 2000));
-      if (isGemini) {
-        assistantMessage = await callGemini(apiKey, agent.model, chatMessages, tools, executeTool);
-      } else if (isPerplexity) {
-        assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool, 'https://api.perplexity.ai/chat/completions');
-      } else if (isClaude) {
-        assistantMessage = await callClaude(apiKey, agent.model, chatMessages, tools, executeTool);
-      } else {
-        assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool);
+      try {
+        if (isGemini) {
+          assistantMessage = await callGemini(apiKey, agent.model, chatMessages, tools, executeTool);
+        } else if (isPerplexity) {
+          assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool, 'https://api.perplexity.ai/chat/completions');
+        } else if (isClaude) {
+          assistantMessage = await callClaude(apiKey, agent.model, chatMessages, tools, executeTool);
+        } else {
+          assistantMessage = await callOpenAI(apiKey, agent.model, chatMessages, tools, executeTool);
+        }
+      } catch (e) {
+        lastLLMError = e;
+        // Error from LLM — will retry on next attempt or fall back to gpt-4.1-mini
       }
     }
 
