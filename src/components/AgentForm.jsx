@@ -13,6 +13,7 @@ import AgentResearchConfig from '@/components/AgentResearchConfig';
 
 const MODEL_GROUPS = [
   { label: 'OpenAI', models: [
+    { value: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', pricing: 'High cost' },
     { value: 'gpt-5.5', label: 'GPT-5.5', pricing: '$5 in / $30 out' },
     { value: 'gpt-5.4', label: 'GPT-5.4', pricing: '$2.50 in / $15 out' },
     { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', pricing: '$0.40 in / $1.60 out' },
