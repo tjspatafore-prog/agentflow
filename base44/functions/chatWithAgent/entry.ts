@@ -349,7 +349,12 @@ async function callOpenAI(apiKey, model, messages, tools, executeTool, baseUrl) 
 
   while (toolCallCount < maxToolCalls) {
     const body = { model, messages: chatMessages };
-    if (tools && tools.length > 0) { body.tools = tools; body.tool_choice = 'auto'; }
+    if (tools && tools.length > 0) {
+      body.tools = tools;
+      body.tool_choice = 'auto';
+      // gpt-5.6-sol is a reasoning model that requires reasoning_effort 'none' when using function tools in /v1/chat/completions
+      if (model === 'gpt-5.6-sol') body.reasoning_effort = 'none';
+    }
 
     const res = await fetch(url, {
       method: 'POST',
